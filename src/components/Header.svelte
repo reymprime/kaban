@@ -1,10 +1,17 @@
 <script>
+  import CreditModal from './CreditModal.svelte';
+
   let { query = $bindable(''), onbackup } = $props();
+  let showCredits = $state(false);
 </script>
 
 <header class="px-4 pb-3 pt-4">
   <div class="mb-3 flex items-center justify-between">
-    <div class="flex items-center gap-2.5">
+    <button
+      class="flex items-center gap-2.5 text-left active:opacity-70"
+      aria-label="About Kaban"
+      onclick={() => (showCredits = true)}
+    >
       <div
         class="flex h-9 w-9 items-center justify-center rounded-xl bg-teal text-white"
       >
@@ -23,7 +30,7 @@
           Prompt vault ni Gnokz
         </p>
       </div>
-    </div>
+    </button>
     <button
       class="flex h-9 w-9 items-center justify-center rounded-xl border border-line bg-card text-ink-soft transition-colors active:bg-line"
       aria-label="Backup and restore"
@@ -52,3 +59,7 @@
     />
   </div>
 </header>
+
+{#if showCredits}
+  <CreditModal onclose={() => (showCredits = false)} />
+{/if}
