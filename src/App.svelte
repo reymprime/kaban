@@ -125,14 +125,7 @@
   </button>
 
   {#if viewing}
-    <NoteViewer
-      item={viewing}
-      onclose={() => (viewing = null)}
-      onedit={() => {
-        editing = viewing;
-        viewing = null;
-      }}
-    />
+    <NoteViewer item={viewing} onclose={() => (viewing = null)} />
   {/if}
   {#if editing}
     <EditorModal item={editing} onclose={() => (editing = null)} />

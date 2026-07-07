@@ -1,15 +1,60 @@
 <script>
-  import { copyText, toast } from '../lib/store.svelte.js';
+  import { copyText, saveItem, toast } from '../lib/store.svelte.js';
 
-  let { item, onclose, onedit } = $props();
+  let { item, onclose } = $props();
+
+  let mode = $state('read'); // 'read' | 'edit'
+
+  // Local copy so the viewer always shows fresh data after saving
+  let current = $state({ ...item, tags: [...item.tags] });
+
+  // Edit fields
+  let title = $state('');
+  let content = $state('');
+  let tagsText = $state('');
+  let saving = $state(false);
+
+  function startEdit() {
+    title = current.title;
+    content = current.content;
+    tagsText = current.tags.join(', ');
+    mode = 'edit';
+  }
+
+  function cancelEdit() {
+    mode = 'read';
+  }
+
+  async function save() {
+    if (!content.trim()) {
+      toast('Note cannot be empty');
+      return;
+    }
+    saving = true;
+    const tags = tagsText
+      .split(',')
+      .map((t) => t.trim().replace(/^#/, ''))
+      .filter(Boolean);
+    const saved = await saveItem({
+      id: current.id,
+      type: current.type,
+      title,
+      content,
+      tags,
+    });
+    current = { ...saved, tags: [...saved.tags] };
+    saving = false;
+    mode = 'read';
+    toast('Changes saved ✓');
+  }
 
   async function handleCopy() {
-    const ok = await copyText(item.content);
+    const ok = await copyText(current.content);
     toast(ok ? 'Copied to clipboard ✓' : 'Copy failed — try again');
   }
 
   const dateText = $derived(
-    new Date(item.updatedAt || item.createdAt).toLocaleDateString('en-PH', {
+    new Date(current.updatedAt || current.createdAt).toLocaleDateString('en-PH', {
       year: 'numeric',
       month: 'short',
       day: 'numeric',
@@ -32,57 +77,125 @@
         <path d="m15 18-6-6 6-6" />
       </svg>
     </button>
-    <span
-      class="rounded-md px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide"
-      style="background: var(--color-cat-note-soft); color: var(--color-cat-note);"
-    >
-      Note
-    </span>
+
+    <!-- Mode toggle -->
+    <div class="flex rounded-xl border border-line p-0.5">
+      <button
+        class="rounded-[10px] px-3 py-1 text-[12px] font-semibold transition-colors
+          {mode === 'read' ? 'bg-ink text-white' : 'text-ink-soft'}"
+        onclick={cancelEdit}
+      >
+        Read Mode
+      </button>
+      <button
+        class="rounded-[10px] px-3 py-1 text-[12px] font-semibold transition-colors
+          {mode === 'edit' ? 'bg-ink text-white' : 'text-ink-soft'}"
+        onclick={startEdit}
+      >
+        Edit Mode
+      </button>
+    </div>
+
     <span class="ml-auto text-[12px] text-ink-soft">{dateText}</span>
   </div>
 
-  <!-- Content -->
-  <div class="flex-1 overflow-y-auto px-5 py-5">
-    <h2 class="mb-1 font-display text-2xl font-bold leading-tight">{item.title}</h2>
-    {#if item.tags.length}
-      <div class="mb-4 flex flex-wrap gap-1">
-        {#each item.tags as tag}
-          <span class="rounded-md bg-paper px-1.5 py-0.5 text-[11px] text-ink-soft">
-            #{tag}
-          </span>
-        {/each}
-      </div>
-    {:else}
-      <div class="mb-4"></div>
-    {/if}
-    <p class="whitespace-pre-wrap text-[15px] leading-relaxed text-ink">
-      {item.content}
-    </p>
-  </div>
+  {#if mode === 'read'}
+    <!-- READ MODE -->
+    <div class="flex-1 overflow-y-auto px-5 py-5">
+      <h2 class="mb-1 font-display text-2xl font-bold leading-tight">
+        {current.title}
+      </h2>
+      {#if current.tags.length}
+        <div class="mb-4 flex flex-wrap gap-1">
+          {#each current.tags as tag}
+            <span class="rounded-md bg-paper px-1.5 py-0.5 text-[11px] text-ink-soft">
+              #{tag}
+            </span>
+          {/each}
+        </div>
+      {:else}
+        <div class="mb-4"></div>
+      {/if}
+      <p class="whitespace-pre-wrap text-[15px] leading-relaxed text-ink">
+        {current.content}
+      </p>
+    </div>
 
-  <!-- Bottom actions -->
-  <div
-    class="flex gap-2 border-t border-line p-4"
-    style="padding-bottom: calc(1rem + env(safe-area-inset-bottom));"
-  >
-    <button
-      class="flex flex-1 items-center justify-center gap-1.5 rounded-xl border border-line py-3 text-[14px] font-semibold text-ink-soft active:bg-paper"
-      onclick={onedit}
+    <div
+      class="flex gap-2 border-t border-line p-4"
+      style="padding-bottom: calc(1rem + env(safe-area-inset-bottom));"
     >
-      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M17 3a2.8 2.8 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3Z" />
-      </svg>
-      Edit
-    </button>
-    <button
-      class="flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-teal py-3 text-[14px] font-semibold text-white active:opacity-90"
-      onclick={handleCopy}
+      <button
+        class="flex flex-1 items-center justify-center gap-1.5 rounded-xl border border-line py-3 text-[14px] font-semibold text-ink-soft active:bg-paper"
+        onclick={startEdit}
+      >
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M17 3a2.8 2.8 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3Z" />
+        </svg>
+        Edit
+      </button>
+      <button
+        class="flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-teal py-3 text-[14px] font-semibold text-white active:opacity-90"
+        onclick={handleCopy}
+      >
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="9" y="9" width="12" height="12" rx="2" />
+          <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+        </svg>
+        Copy
+      </button>
+    </div>
+  {:else}
+    <!-- EDIT MODE -->
+    <div class="flex flex-1 flex-col overflow-y-auto px-5 py-4">
+      <label class="mb-1 block text-[12px] font-semibold text-ink-soft" for="nv-title">
+        Title
+      </label>
+      <input
+        id="nv-title"
+        type="text"
+        bind:value={title}
+        class="mb-3 w-full rounded-xl border border-line bg-paper px-3.5 py-2.5 font-display text-[16px] font-semibold focus:border-teal focus:outline-none"
+      />
+
+      <label class="mb-1 block text-[12px] font-semibold text-ink-soft" for="nv-content">
+        Note
+      </label>
+      <textarea
+        id="nv-content"
+        bind:value={content}
+        class="mb-3 min-h-[40dvh] w-full flex-1 resize-none rounded-xl border border-line bg-paper px-3.5 py-2.5 text-[15px] leading-relaxed focus:border-teal focus:outline-none"
+      ></textarea>
+
+      <label class="mb-1 block text-[12px] font-semibold text-ink-soft" for="nv-tags">
+        Tags <span class="font-normal">(comma separated, optional)</span>
+      </label>
+      <input
+        id="nv-tags"
+        type="text"
+        bind:value={tagsText}
+        placeholder="ideas, lyrics, todo"
+        class="w-full rounded-xl border border-line bg-paper px-3.5 py-2.5 text-[14px] focus:border-teal focus:outline-none"
+      />
+    </div>
+
+    <div
+      class="flex gap-2 border-t border-line p-4"
+      style="padding-bottom: calc(1rem + env(safe-area-inset-bottom));"
     >
-      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <rect x="9" y="9" width="12" height="12" rx="2" />
-        <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
-      </svg>
-      Copy
-    </button>
-  </div>
+      <button
+        class="flex-1 rounded-xl border border-line py-3 text-[14px] font-semibold text-ink-soft active:bg-paper"
+        onclick={cancelEdit}
+      >
+        Cancel
+      </button>
+      <button
+        class="flex-1 rounded-xl bg-teal py-3 text-[14px] font-semibold text-white active:opacity-90 disabled:opacity-50"
+        disabled={saving}
+        onclick={save}
+      >
+        Save changes
+      </button>
+    </div>
+  {/if}
 </div>
