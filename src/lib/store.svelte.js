@@ -33,6 +33,22 @@ export function newId() {
     : Date.now().toString(36) + Math.random().toString(36).slice(2, 10);
 }
 
+// IndexedDB cannot clone Svelte's reactive proxies — always write plain copies.
+function plain(i) {
+  return {
+    id: i.id,
+    type: i.type,
+    title: i.title,
+    content: i.content,
+    description: i.description || '',
+    tags: [...(i.tags || [])],
+    pinned: !!i.pinned,
+    locked: !!i.locked,
+    createdAt: i.createdAt,
+    updatedAt: i.updatedAt,
+  };
+}
+
 export async function saveItem(data) {
   const now = Date.now();
   const existing = data.id ? vault.items.find((i) => i.id === data.id) : null;
@@ -41,8 +57,10 @@ export async function saveItem(data) {
     type: data.type,
     title: (data.title || '').trim() || 'Untitled',
     content: (data.content || '').trim(),
-    tags: data.tags || [],
-    pinned: existing ? existing.pinned : false,
+    description: (data.description || '').trim(),
+    tags: [...(data.tags || [])],
+    pinned: existing ? !!existing.pinned : false,
+    locked: existing ? !!existing.locked : false,
     createdAt: existing ? existing.createdAt : now,
     updatedAt: now,
   };
@@ -57,12 +75,23 @@ export async function saveItem(data) {
 }
 
 export async function deleteItem(id) {
+  const item = vault.items.find((i) => i.id === id);
+  if (item?.locked) throw new Error('Item is locked');
   await db.remove(id);
   vault.items = vault.items.filter((i) => i.id !== id);
 }
 
 export async function togglePin(item) {
-  const updated = { ...item, pinned: !item.pinned, updatedAt: item.updatedAt };
+  const updated = plain(item);
+  updated.pinned = !item.pinned;
+  await db.put(updated);
+  const idx = vault.items.findIndex((i) => i.id === item.id);
+  vault.items[idx] = updated;
+}
+
+export async function toggleLock(item) {
+  const updated = plain(item);
+  updated.locked = !item.locked;
   await db.put(updated);
   const idx = vault.items.findIndex((i) => i.id === item.id);
   vault.items[idx] = updated;
@@ -133,8 +162,10 @@ export async function importBackup(file) {
       type: raw.type,
       title: raw.title || 'Untitled',
       content: raw.content || '',
+      description: raw.description || '',
       tags: Array.isArray(raw.tags) ? raw.tags : [],
       pinned: !!raw.pinned,
+      locked: !!raw.locked,
       createdAt: raw.createdAt || Date.now(),
       updatedAt: raw.updatedAt || Date.now(),
     };

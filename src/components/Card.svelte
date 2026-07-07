@@ -1,14 +1,21 @@
 <script>
   import { CATEGORIES } from '../lib/categories.js';
   import { detectPlatform, normalizeUrl } from '../lib/platform.js';
-  import { copyText, togglePin, toast } from '../lib/store.svelte.js';
+  import { copyText, togglePin, toggleLock, toast } from '../lib/store.svelte.js';
 
   let { item, onedit, ondelete, onview } = $props();
 
   const cat = $derived(CATEGORIES[item.type]);
   const platform = $derived(item.type === 'link' ? detectPlatform(item.content) : null);
+  const locked = $derived(!!item.locked);
+  // Links lose copy access when locked; prompts and notes keep copy
+  const copyBlocked = $derived(locked && item.type === 'link');
+
+  // Lock icon animation — re-keyed to replay CSS animation each press
+  let anim = $state({ n: 0, type: '' });
 
   async function handleCopy() {
+    if (copyBlocked) return denied();
     const ok = await copyText(item.content);
     toast(ok ? 'Copied to clipboard ✓' : 'Copy failed — try again');
   }
@@ -16,12 +23,24 @@
   async function handlePin() {
     const nowPinned = !item.pinned;
     await togglePin(item);
-    toast(nowPinned ? 'Pinned to top 📌' : 'Unpinned');
+    toast(nowPinned ? 'Pinned to top' : 'Unpinned');
+  }
+
+  async function handleLock() {
+    const nowLocked = !item.locked;
+    await toggleLock(item);
+    anim = { n: anim.n + 1, type: 'lock-pop' };
+    toast(nowLocked ? 'Locked — protected from changes' : 'Unlocked');
+  }
+
+  function denied() {
+    anim = { n: anim.n + 1, type: 'lock-shake' };
+    toast('Locked — unlock first to get access');
   }
 </script>
 
 <li
-  class="relative overflow-hidden rounded-2xl border border-line bg-card"
+  class="relative overflow-hidden rounded-2xl border bg-card {locked ? 'border-ink/15' : 'border-line'}"
   style="border-left: 4px solid {cat.color};"
 >
   <div class="p-4 pb-3">
@@ -43,24 +62,58 @@
             </span>
           {/if}
           {#if item.pinned}
-            <span class="text-[11px]" aria-label="Pinned">📌</span>
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="var(--color-teal)" aria-label="Pinned">
+              <path d="M14.6 2.2a1.5 1.5 0 0 0-2.4.4L9.9 7.1l-4.6 1a1.5 1.5 0 0 0-.74 2.53l3.4 3.4-5 6.1a.75.75 0 0 0 1.06 1.05l6.1-5 3.4 3.4a1.5 1.5 0 0 0 2.52-.74l1-4.6 4.5-2.3a1.5 1.5 0 0 0 .4-2.4l-7.3-7.3Z" />
+            </svg>
           {/if}
         </div>
         <h3 class="truncate font-display text-[15px] font-semibold leading-snug">
           {item.title}
         </h3>
+        {#if item.description}
+          <p class="clamp-2 mt-0.5 text-[12px] italic text-ink-soft/90">
+            {item.description}
+          </p>
+        {/if}
       </div>
 
-      <!-- Pin toggle -->
-      <button
-        class="shrink-0 rounded-lg p-1.5 text-ink-soft transition-colors active:bg-line"
-        aria-label={item.pinned ? 'Unpin' : 'Pin to top'}
-        onclick={handlePin}
-      >
-        <svg width="16" height="16" viewBox="0 0 24 24" fill={item.pinned ? 'currentColor' : 'none'} stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M12 17v5M9 3h6l1 7 3 3H5l3-3 1-7Z" />
-        </svg>
-      </button>
+      <div class="flex shrink-0 items-center">
+        <!-- Lock toggle -->
+        <button
+          class="rounded-lg p-1.5 transition-colors active:bg-line {locked ? 'text-teal' : 'text-ink-soft/60'}"
+          aria-label={locked ? 'Unlock' : 'Lock'}
+          onclick={handleLock}
+        >
+          {#key anim.n}
+            <span class="block {anim.type}">
+              {#if locked}
+                <!-- Closed padlock -->
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <rect x="4" y="11" width="16" height="10" rx="2.5" />
+                  <path d="M8 11V7a4 4 0 0 1 8 0v4" />
+                  <circle cx="12" cy="16" r="1.3" fill="currentColor" stroke="none" />
+                </svg>
+              {:else}
+                <!-- Open padlock -->
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <rect x="4" y="11" width="16" height="10" rx="2.5" />
+                  <path d="M8 11V7a4 4 0 0 1 7.6-1.8" />
+                </svg>
+              {/if}
+            </span>
+          {/key}
+        </button>
+        <!-- Pin toggle -->
+        <button
+          class="rounded-lg p-1.5 transition-colors active:bg-line {item.pinned ? 'text-teal' : 'text-ink-soft/60'}"
+          aria-label={item.pinned ? 'Unpin' : 'Pin to top'}
+          onclick={handlePin}
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill={item.pinned ? 'currentColor' : 'none'} stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 17v5M9 3h6l1 7 3 3H5l3-3 1-7Z" />
+          </svg>
+        </button>
+      </div>
     </div>
 
     {#if item.type === 'link'}
@@ -70,8 +123,11 @@
         <p class="clamp-3 whitespace-pre-wrap text-[13px] leading-relaxed text-ink-soft">
           {item.content}
         </p>
-        <span class="mt-1 inline-block text-[12px] font-semibold text-cat-note">
-          Read full note →
+        <span class="mt-1 inline-flex items-center gap-1 text-[12px] font-semibold text-cat-note">
+          Read full note
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M5 12h14m-6-6 6 6-6 6" />
+          </svg>
         </span>
       </button>
     {:else}
@@ -107,34 +163,64 @@
       </a>
       <div class="h-6 w-px bg-line"></div>
     {/if}
+
+    <!-- Copy -->
     <button
-      class="flex flex-1 items-center justify-center gap-1.5 py-2.5 text-[13px] font-semibold text-teal transition-colors active:bg-paper"
+      class="flex flex-1 items-center justify-center gap-1.5 py-2.5 text-[13px] font-semibold transition-colors active:bg-paper
+        {copyBlocked ? 'text-ink-soft/40' : 'text-teal'}"
       onclick={handleCopy}
     >
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <rect x="9" y="9" width="12" height="12" rx="2" />
-        <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
-      </svg>
+      {#if copyBlocked}
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="4" y="11" width="16" height="10" rx="2.5" />
+          <path d="M8 11V7a4 4 0 0 1 8 0v4" />
+        </svg>
+      {:else}
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="9" y="9" width="12" height="12" rx="2" />
+          <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+        </svg>
+      {/if}
       Copy
     </button>
     <div class="h-6 w-px bg-line"></div>
+
+    <!-- Edit -->
     <button
-      class="flex flex-1 items-center justify-center gap-1.5 py-2.5 text-[13px] font-medium text-ink-soft transition-colors active:bg-paper"
-      onclick={onedit}
+      class="flex flex-1 items-center justify-center gap-1.5 py-2.5 text-[13px] font-medium transition-colors active:bg-paper
+        {locked ? 'text-ink-soft/40' : 'text-ink-soft'}"
+      onclick={locked ? denied : onedit}
     >
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M17 3a2.8 2.8 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3Z" />
-      </svg>
+      {#if locked}
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="4" y="11" width="16" height="10" rx="2.5" />
+          <path d="M8 11V7a4 4 0 0 1 8 0v4" />
+        </svg>
+      {:else}
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M17 3a2.8 2.8 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3Z" />
+        </svg>
+      {/if}
       Edit
     </button>
     <div class="h-6 w-px bg-line"></div>
+
+    <!-- Delete -->
     <button
-      class="flex flex-1 items-center justify-center gap-1.5 py-2.5 text-[13px] font-medium text-ink-soft transition-colors active:bg-paper"
-      onclick={ondelete}
+      class="flex flex-1 items-center justify-center gap-1.5 py-2.5 text-[13px] font-medium transition-colors active:bg-paper
+        {locked ? 'text-ink-soft/40' : 'text-ink-soft'}"
+      onclick={locked ? denied : ondelete}
     >
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6" />
-      </svg>
+      {#if locked}
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="4" y="11" width="16" height="10" rx="2.5" />
+          <path d="M8 11V7a4 4 0 0 1 8 0v4" />
+        </svg>
+      {:else}
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6" />
+        </svg>
+      {/if}
       Delete
     </button>
   </div>

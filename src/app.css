@@ -104,9 +104,53 @@ textarea {
   animation: toast-in 0.16s ease-out;
 }
 
+/* Lock icon: satisfying pop when toggled */
+@keyframes lock-pop {
+  0% {
+    transform: scale(1);
+  }
+  40% {
+    transform: scale(1.4) rotate(-12deg);
+  }
+  70% {
+    transform: scale(0.92) rotate(6deg);
+  }
+  100% {
+    transform: scale(1) rotate(0);
+  }
+}
+.lock-pop {
+  animation: lock-pop 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* Lock icon: shake when a locked action is attempted */
+@keyframes lock-shake {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  20% {
+    transform: translateX(-3px) rotate(-8deg);
+  }
+  40% {
+    transform: translateX(3px) rotate(8deg);
+  }
+  60% {
+    transform: translateX(-2px) rotate(-5deg);
+  }
+  80% {
+    transform: translateX(2px) rotate(5deg);
+  }
+}
+.lock-shake {
+  animation: lock-shake 0.4s ease-in-out;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .pop-in,
-  .toast-in {
+  .toast-in,
+  .lock-pop,
+  .lock-shake {
     animation: none;
   }
 }

@@ -10,12 +10,18 @@
 
   // Edit fields
   let title = $state('');
+  let description = $state('');
   let content = $state('');
   let tagsText = $state('');
   let saving = $state(false);
 
   function startEdit() {
+    if (current.locked) {
+      toast('Locked — unlock the card first to edit');
+      return;
+    }
     title = current.title;
+    description = current.description || '';
     content = current.content;
     tagsText = current.tags.join(', ');
     mode = 'edit';
@@ -39,6 +45,7 @@
       id: current.id,
       type: current.type,
       title,
+      description,
       content,
       tags,
     });
@@ -96,7 +103,15 @@
       </button>
     </div>
 
-    <span class="ml-auto text-[12px] text-ink-soft">{dateText}</span>
+    <span class="ml-auto flex items-center gap-1.5 text-[12px] text-ink-soft">
+      {#if current.locked}
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--color-teal)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-label="Locked">
+          <rect x="4" y="11" width="16" height="10" rx="2.5" />
+          <path d="M8 11V7a4 4 0 0 1 8 0v4" />
+        </svg>
+      {/if}
+      {dateText}
+    </span>
   </div>
 
   {#if mode === 'read'}
@@ -105,6 +120,9 @@
       <h2 class="mb-1 font-display text-2xl font-bold leading-tight">
         {current.title}
       </h2>
+      {#if current.description}
+        <p class="mb-2 text-[13px] italic text-ink-soft">{current.description}</p>
+      {/if}
       {#if current.tags.length}
         <div class="mb-4 flex flex-wrap gap-1">
           {#each current.tags as tag}
@@ -156,6 +174,17 @@
         type="text"
         bind:value={title}
         class="mb-3 w-full rounded-xl border border-line bg-paper px-3.5 py-2.5 font-display text-[16px] font-semibold focus:border-teal focus:outline-none"
+      />
+
+      <label class="mb-1 block text-[12px] font-semibold text-ink-soft" for="nv-desc">
+        Description <span class="font-normal">(optional)</span>
+      </label>
+      <input
+        id="nv-desc"
+        type="text"
+        bind:value={description}
+        placeholder="Purpose of this note"
+        class="mb-3 w-full rounded-xl border border-line bg-paper px-3.5 py-2.5 text-[14px] focus:border-teal focus:outline-none"
       />
 
       <label class="mb-1 block text-[12px] font-semibold text-ink-soft" for="nv-content">

@@ -82,9 +82,13 @@
     {:else if filtered.length === 0}
       <div class="flex flex-col items-center gap-3 py-20 text-center">
         <div
-          class="flex h-14 w-14 items-center justify-center rounded-2xl bg-teal-soft text-2xl"
+          class="flex h-14 w-14 items-center justify-center rounded-2xl bg-teal-soft"
         >
-          🪙
+          <svg width="26" height="26" viewBox="0 0 24 24" fill="var(--color-teal)">
+            <path
+              d="M12 3a6 6 0 0 0-2.4 11.5l-1.1 5.3a1 1 0 0 0 1 1.2h5a1 1 0 0 0 1-1.2l-1.1-5.3A6 6 0 0 0 12 3Zm0 3.5a2.5 2.5 0 1 1 0 5 2.5 2.5 0 0 1 0-5Z"
+            />
+          </svg>
         </div>
         {#if query}
           <p class="text-sm text-ink-soft">

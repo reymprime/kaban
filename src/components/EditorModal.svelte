@@ -7,6 +7,7 @@
   const isNew = !item.id;
   let type = $state(item.type || 'image');
   let title = $state(item.title || '');
+  let description = $state(item.description || '');
   let content = $state(item.content || '');
   let tagsText = $state((item.tags || []).join(', '));
   let saving = $state(false);
@@ -23,7 +24,7 @@
       .split(',')
       .map((t) => t.trim().replace(/^#/, ''))
       .filter(Boolean);
-    await saveItem({ id: item.id, type, title, content, tags });
+    await saveItem({ id: item.id, type, title, description, content, tags });
     saving = false;
     toast(isNew ? 'Saved to your kaban ✓' : 'Changes saved ✓');
     onclose();
@@ -85,6 +86,17 @@
         bind:value={title}
         placeholder={isLink ? 'e.g. TikTok transition tutorial' : 'e.g. Cinematic rain scene'}
         class="mb-4 w-full rounded-xl border border-line bg-paper px-3.5 py-2.5 text-[15px] focus:border-teal focus:outline-none"
+      />
+
+      <label class="mb-1 block text-[12px] font-semibold text-ink-soft" for="kb-desc">
+        Description <span class="font-normal">(optional — purpose of this card)</span>
+      </label>
+      <input
+        id="kb-desc"
+        type="text"
+        bind:value={description}
+        placeholder="e.g. For GISING part 2 scenes"
+        class="mb-4 w-full rounded-xl border border-line bg-paper px-3.5 py-2.5 text-[14px] focus:border-teal focus:outline-none"
       />
 
       <label class="mb-1 block text-[12px] font-semibold text-ink-soft" for="kb-content">
