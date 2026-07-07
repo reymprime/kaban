@@ -7,12 +7,14 @@
   import EditorModal from './components/EditorModal.svelte';
   import ConfirmModal from './components/ConfirmModal.svelte';
   import BackupModal from './components/BackupModal.svelte';
+  import NoteViewer from './components/NoteViewer.svelte';
   import Toast from './components/Toast.svelte';
 
   let tab = $state('all');
   let query = $state('');
   let editing = $state(null); // item object (edit) or { type } (new)
   let deleting = $state(null); // item pending delete confirmation
+  let viewing = $state(null); // note being viewed full screen
   let showBackup = $state(false);
 
   onMount(loadVault);
@@ -103,6 +105,7 @@
             {item}
             onedit={() => (editing = item)}
             ondelete={() => (deleting = item)}
+            onview={() => (viewing = item)}
           />
         {/each}
       </ul>
@@ -121,6 +124,16 @@
     </svg>
   </button>
 
+  {#if viewing}
+    <NoteViewer
+      item={viewing}
+      onclose={() => (viewing = null)}
+      onedit={() => {
+        editing = viewing;
+        viewing = null;
+      }}
+    />
+  {/if}
   {#if editing}
     <EditorModal item={editing} onclose={() => (editing = null)} />
   {/if}

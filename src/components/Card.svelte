@@ -3,7 +3,7 @@
   import { detectPlatform, normalizeUrl } from '../lib/platform.js';
   import { copyText, togglePin, toast } from '../lib/store.svelte.js';
 
-  let { item, onedit, ondelete } = $props();
+  let { item, onedit, ondelete, onview } = $props();
 
   const cat = $derived(CATEGORIES[item.type]);
   const platform = $derived(item.type === 'link' ? detectPlatform(item.content) : null);
@@ -66,9 +66,14 @@
     {#if item.type === 'link'}
       <p class="truncate text-[13px] text-ink-soft">{platform.host || item.content}</p>
     {:else if item.type === 'note'}
-      <p class="clamp-3 whitespace-pre-wrap text-[13px] leading-relaxed text-ink-soft">
-        {item.content}
-      </p>
+      <button class="block w-full text-left" onclick={onview} aria-label="Open note full screen">
+        <p class="clamp-3 whitespace-pre-wrap text-[13px] leading-relaxed text-ink-soft">
+          {item.content}
+        </p>
+        <span class="mt-1 inline-block text-[12px] font-semibold text-cat-note">
+          Read full note →
+        </span>
+      </button>
     {:else}
       <p class="clamp-3 rounded-lg bg-paper p-2.5 font-mono text-[12px] leading-relaxed text-ink-soft">
         {item.content}
