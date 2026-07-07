@@ -27,6 +27,8 @@
 
 html {
   background: var(--color-paper);
+  /* Disable pull-to-refresh and overscroll glow */
+  overscroll-behavior-y: none;
 }
 
 body {
@@ -34,6 +36,20 @@ body {
   color: var(--color-ink);
   -webkit-tap-highlight-color: transparent;
   overscroll-behavior-y: none;
+  /* Disable pinch zoom and double-tap zoom */
+  touch-action: pan-x pan-y;
+  /* Disable text selection highlight for app-like feel */
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+/* Keep text selectable where it matters: typing fields */
+input,
+textarea {
+  -webkit-user-select: text;
+  user-select: text;
+  /* Allow normal touch behavior inside fields */
+  touch-action: manipulation;
 }
 
 /* Clamp helpers */
