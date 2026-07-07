@@ -39,7 +39,7 @@
         Created by
       </p>
       <p class="font-display text-lg font-bold">Reymark Delagao</p>
-      <p class="mb-4 text-[13px] text-ink-soft">GNOKZ Production</p>
+      <p class="mb-4 text-[13px] text-ink-soft">Gnokz Production</p>
 
       <p class="mb-4 text-[12px] leading-relaxed text-ink-soft">
         Built with Svelte, crafted entirely on Android. 🇵🇭
