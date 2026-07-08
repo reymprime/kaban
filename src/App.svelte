@@ -1,13 +1,14 @@
 <script>
   import { onMount } from 'svelte';
   import { vault, loadVault, shareItems, toast } from './lib/store.svelte.js';
-  import { TABS } from './lib/categories.js';
+  import { TABS, CATEGORIES } from './lib/categories.js';
   import Header from './components/Header.svelte';
   import Card from './components/Card.svelte';
   import EditorModal from './components/EditorModal.svelte';
   import ConfirmModal from './components/ConfirmModal.svelte';
   import BackupModal from './components/BackupModal.svelte';
   import NoteViewer from './components/NoteViewer.svelte';
+  import FolderModal from './components/FolderModal.svelte';
   import Toast from './components/Toast.svelte';
 
   let tab = $state('all');
@@ -16,6 +17,11 @@
   let deleting = $state(null); // item pending delete confirmation
   let viewing = $state(null); // note being viewed full screen
   let showBackup = $state(false);
+
+  // Folders
+  let showFabMenu = $state(false);
+  let folderEditing = $state(null); // folder object (edit) or {} (new)
+  let openFolder = $state(null); // folder currently being browsed
 
   // Select-to-share mode
   let selecting = $state(false);
@@ -56,15 +62,28 @@
 
   onMount(loadVault);
 
+  // Keep the open folder header fresh after renames
+  $effect(() => {
+    if (openFolder) {
+      const fresh = vault.folders.find((f) => f.id === openFolder.id);
+      if (fresh && fresh !== openFolder) openFolder = fresh;
+    }
+  });
+
   const filtered = $derived.by(() => {
     const q = query.trim().toLowerCase();
     let list = vault.items;
-    if (tab !== 'all') list = list.filter((i) => i.type === tab);
+    if (openFolder) {
+      list = list.filter((i) => i.folderId === openFolder.id);
+    } else if (tab !== 'all') {
+      list = list.filter((i) => i.type === tab);
+    }
     if (q) {
       list = list.filter(
         (i) =>
           i.title.toLowerCase().includes(q) ||
           i.content.toLowerCase().includes(q) ||
+          (i.description || '').toLowerCase().includes(q) ||
           i.tags.some((t) => t.toLowerCase().includes(q))
       );
     }
@@ -74,6 +93,28 @@
     });
   });
 
+  const visibleFolders = $derived.by(() => {
+    if (openFolder) return [];
+    let fs = vault.folders;
+    if (tab !== 'all') {
+      fs = fs.filter((f) => f.category === tab || f.category === 'all');
+    }
+    const q = query.trim().toLowerCase();
+    if (q) fs = fs.filter((f) => f.name.toLowerCase().includes(q));
+    return [...fs].sort((a, b) => a.name.localeCompare(b.name));
+  });
+
+  const folderCounts = $derived.by(() => {
+    const c = {};
+    for (const i of vault.items) {
+      if (i.folderId) c[i.folderId] = (c[i.folderId] || 0) + 1;
+    }
+    return c;
+  });
+
+  const folderColor = (f) =>
+    f.category === 'all' ? 'var(--color-teal)' : CATEGORIES[f.category]?.color;
+
   const counts = $derived.by(() => {
     const c = { all: vault.items.length, image: 0, video: 0, link: 0, note: 0 };
     for (const i of vault.items) c[i.type] = (c[i.type] || 0) + 1;
@@ -81,8 +122,13 @@
   });
 
   function newItem() {
-    const type = tab === 'all' ? 'image' : tab;
-    editing = { type };
+    let type = tab === 'all' ? 'image' : tab;
+    let folderId;
+    if (openFolder) {
+      if (openFolder.category !== 'all') type = openFolder.category;
+      folderId = openFolder.id;
+    }
+    editing = { type, folderId };
   }
 </script>
 
@@ -90,30 +136,96 @@
   <div class="sticky top-0 z-20 border-b border-line/60 bg-paper">
     <Header bind:query onbackup={() => (showBackup = true)} />
 
-    <!-- Category tabs -->
-    <nav
-      class="no-scrollbar flex gap-2 overflow-x-auto px-4 pb-3"
-      aria-label="Categories"
-    >
-    {#each TABS as t (t.id)}
-      <button
-        class="shrink-0 rounded-full border px-3.5 py-1.5 text-[13px] font-medium transition-colors
-          {tab === t.id
-          ? 'border-ink bg-ink text-white'
-          : 'border-line bg-card text-ink-soft'}"
-        onclick={() => (tab = t.id)}
+    <!-- Category tabs / folder header -->
+    {#if openFolder}
+      <div class="flex items-center gap-2 px-4 pb-3">
+        <button
+          class="flex h-9 w-9 items-center justify-center rounded-xl border border-line bg-card text-ink-soft active:bg-line"
+          aria-label="Back to all"
+          onclick={() => (openFolder = null)}
+        >
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="m15 18-6-6 6-6" />
+          </svg>
+        </button>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill={folderColor(openFolder)}>
+          <path d="M4 5a2 2 0 0 1 2-2h3.6a2 2 0 0 1 1.6.8l1.2 1.6a1 1 0 0 0 .8.4H18a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V5Z" />
+        </svg>
+        <div class="min-w-0 flex-1">
+          <p class="truncate font-display text-[15px] font-bold leading-none">
+            {openFolder.name}
+          </p>
+          <p class="mt-0.5 text-[11px] text-ink-soft">
+            {folderCounts[openFolder.id] || 0} card{(folderCounts[openFolder.id] || 0) === 1 ? '' : 's'}
+          </p>
+        </div>
+        <button
+          class="flex h-9 w-9 items-center justify-center rounded-xl border border-line bg-card text-ink-soft active:bg-line"
+          aria-label="Edit folder"
+          onclick={() => (folderEditing = openFolder)}
+        >
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M17 3a2.8 2.8 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3Z" />
+          </svg>
+        </button>
+      </div>
+    {:else}
+      <nav
+        class="no-scrollbar flex gap-2 overflow-x-auto px-4 pb-3"
+        aria-label="Categories"
       >
-        {t.label}
-        {#if counts[t.id]}
-          <span class="ml-1 opacity-60">{counts[t.id]}</span>
-        {/if}
-      </button>
-      {/each}
-    </nav>
+        {#each TABS as t (t.id)}
+          <button
+            class="shrink-0 rounded-full border px-3.5 py-1.5 text-[13px] font-medium transition-colors
+              {tab === t.id
+              ? 'border-ink bg-ink text-white'
+              : 'border-line bg-card text-ink-soft'}"
+            onclick={() => (tab = t.id)}
+          >
+            {t.label}
+            {#if counts[t.id]}
+              <span class="ml-1 opacity-60">{counts[t.id]}</span>
+            {/if}
+          </button>
+        {/each}
+      </nav>
+    {/if}
   </div>
 
   <!-- Card list -->
   <main class="flex-1 px-4 pb-32 pt-1">
+    {#if visibleFolders.length}
+      <ul class="mb-3 flex flex-col gap-2">
+        {#each visibleFolders as f (f.id)}
+          <li class="relative">
+            <button
+              class="flex w-full items-center gap-3 rounded-2xl border border-line bg-card px-4 py-3 pr-12 text-left active:bg-paper"
+              onclick={() => (openFolder = f)}
+            >
+              <svg width="20" height="20" viewBox="0 0 24 24" fill={folderColor(f)} class="shrink-0">
+                <path d="M4 5a2 2 0 0 1 2-2h3.6a2 2 0 0 1 1.6.8l1.2 1.6a1 1 0 0 0 .8.4H18a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V5Z" />
+              </svg>
+              <span class="min-w-0 flex-1">
+                <span class="block truncate text-[14px] font-semibold">{f.name}</span>
+                <span class="block text-[11px] text-ink-soft">
+                  {folderCounts[f.id] || 0} card{(folderCounts[f.id] || 0) === 1 ? '' : 's'}
+                </span>
+              </span>
+            </button>
+            <button
+              class="absolute right-3 top-1/2 -translate-y-1/2 rounded-lg p-1.5 text-ink-soft/60 active:bg-line"
+              aria-label="Edit folder {f.name}"
+              onclick={() => (folderEditing = f)}
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M17 3a2.8 2.8 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3Z" />
+              </svg>
+            </button>
+          </li>
+        {/each}
+      </ul>
+    {/if}
+
     {#if !vault.loaded}
       <p class="py-16 text-center text-sm text-ink-soft">Opening your kaban…</p>
     {:else if filtered.length === 0}
@@ -130,6 +242,16 @@
         {#if query}
           <p class="text-sm text-ink-soft">
             No results for “{query}”. Try another keyword.
+          </p>
+        {:else if openFolder}
+          <p class="font-display text-lg font-semibold">Empty folder</p>
+          <p class="max-w-[260px] text-sm text-ink-soft">
+            Tap <span class="font-semibold text-teal">+</span> to add a card here,
+            or edit an existing card and set its Folder to “{openFolder.name}”.
+          </p>
+        {:else if visibleFolders.length}
+          <p class="max-w-[240px] text-sm text-ink-soft">
+            No cards here yet — tap <span class="font-semibold text-teal">+</span> to add one.
           </p>
         {:else}
           <p class="font-display text-lg font-semibold">Your kaban is empty</p>
@@ -157,15 +279,58 @@
     {/if}
   </main>
 
-  <!-- FAB -->
+  <!-- FAB + menu -->
   {#if !selecting}
+    {#if showFabMenu}
+      <button
+        class="fixed inset-0 z-30 bg-ink/20"
+        aria-label="Close menu"
+        onclick={() => (showFabMenu = false)}
+      ></button>
+      <div class="fixed bottom-24 right-5 z-30 flex flex-col items-end gap-2">
+        <button
+          class="pop-in flex items-center gap-2 rounded-2xl border border-line bg-card py-3 pl-4 pr-5 text-[14px] font-semibold shadow-lg active:bg-paper"
+          onclick={() => {
+            showFabMenu = false;
+            folderEditing = {};
+          }}
+        >
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="var(--color-teal)">
+            <path d="M4 5a2 2 0 0 1 2-2h3.6a2 2 0 0 1 1.6.8l1.2 1.6a1 1 0 0 0 .8.4H18a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V5Z" />
+          </svg>
+          New Folder
+        </button>
+        <button
+          class="pop-in flex items-center gap-2 rounded-2xl border border-line bg-card py-3 pl-4 pr-5 text-[14px] font-semibold shadow-lg active:bg-paper"
+          onclick={() => {
+            showFabMenu = false;
+            newItem();
+          }}
+        >
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--color-teal)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="3" width="18" height="18" rx="4" />
+            <path d="M12 8v8M8 12h8" />
+          </svg>
+          New Card
+        </button>
+      </div>
+    {/if}
     <button
       class="fixed bottom-6 right-5 z-30 flex h-14 w-14 items-center justify-center rounded-2xl bg-teal text-white shadow-lg shadow-teal/30 transition-transform active:scale-95"
       style="margin-bottom: env(safe-area-inset-bottom);"
-      aria-label="Add new item"
-      onclick={newItem}
+      aria-label={showFabMenu ? 'Close menu' : 'Add new'}
+      onclick={() => (showFabMenu = !showFabMenu)}
     >
-      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round">
+      <svg
+        width="24"
+        height="24"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2.2"
+        stroke-linecap="round"
+        class="transition-transform duration-200 {showFabMenu ? 'rotate-45' : ''}"
+      >
         <path d="M12 5v14M5 12h14" />
       </svg>
     </button>
@@ -207,6 +372,13 @@
     </div>
   {/if}
 
+  {#if folderEditing}
+    <FolderModal
+      folder={folderEditing}
+      onclose={() => (folderEditing = null)}
+      ondeleted={() => (openFolder = null)}
+    />
+  {/if}
   {#if viewing}
     <NoteViewer item={viewing} onclose={() => (viewing = null)} />
   {/if}

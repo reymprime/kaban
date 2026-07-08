@@ -5,6 +5,7 @@ import * as db from './db.js';
 
 export const vault = $state({
   items: [],
+  folders: [],
   loaded: false,
   toast: null,
 });
@@ -19,10 +20,13 @@ export function toast(message) {
 
 export async function loadVault() {
   try {
-    vault.items = await db.getAll();
+    const [items, folders] = await Promise.all([db.getAll(), db.getAllFolders()]);
+    vault.items = items;
+    vault.folders = folders;
   } catch (e) {
     console.error('Failed to load vault:', e);
     vault.items = [];
+    vault.folders = [];
   }
   vault.loaded = true;
 }
@@ -44,8 +48,19 @@ function plain(i) {
     tags: [...(i.tags || [])],
     pinned: !!i.pinned,
     locked: !!i.locked,
+    folderId: i.folderId || null,
     createdAt: i.createdAt,
     updatedAt: i.updatedAt,
+  };
+}
+
+function plainFolder(f) {
+  return {
+    id: f.id,
+    name: f.name,
+    category: f.category || 'all',
+    createdAt: f.createdAt,
+    updatedAt: f.updatedAt,
   };
 }
 
@@ -61,6 +76,13 @@ export async function saveItem(data) {
     tags: [...(data.tags || [])],
     pinned: existing ? !!existing.pinned : false,
     locked: existing ? !!existing.locked : false,
+    // Preserve folder when caller (e.g. NoteViewer) doesn't send folderId
+    folderId:
+      data.folderId !== undefined
+        ? data.folderId || null
+        : existing
+          ? existing.folderId || null
+          : null,
     createdAt: existing ? existing.createdAt : now,
     updatedAt: now,
   };
@@ -72,6 +94,40 @@ export async function saveItem(data) {
     vault.items.push(item);
   }
   return item;
+}
+
+// ---- Folders ----
+
+export async function saveFolder(data) {
+  const now = Date.now();
+  const existing = data.id ? vault.folders.find((f) => f.id === data.id) : null;
+  const folder = {
+    id: data.id || newId(),
+    name: (data.name || '').trim() || 'Untitled folder',
+    category: data.category || 'all',
+    createdAt: existing ? existing.createdAt : now,
+    updatedAt: now,
+  };
+  await db.putFolder(folder);
+  if (existing) {
+    const idx = vault.folders.findIndex((f) => f.id === folder.id);
+    vault.folders[idx] = folder;
+  } else {
+    vault.folders.push(folder);
+  }
+  return folder;
+}
+
+export async function deleteFolder(id) {
+  // Cards inside are NOT deleted — they just leave the folder.
+  const members = vault.items.filter((i) => i.folderId === id).map(plain);
+  for (const m of members) m.folderId = null;
+  if (members.length) await db.bulkPut(members);
+  await db.removeFolder(id);
+  vault.items = vault.items.map((i) =>
+    i.folderId === id ? { ...plain(i), folderId: null } : i
+  );
+  vault.folders = vault.folders.filter((f) => f.id !== id);
 }
 
 export async function deleteItem(id) {
@@ -125,7 +181,8 @@ export function exportBackup() {
     app: 'kaban',
     version: 1,
     exportedAt: new Date().toISOString(),
-    items: vault.items,
+    items: vault.items.map(plain),
+    folders: vault.folders.map(plainFolder),
   };
   const blob = new Blob([JSON.stringify(payload, null, 2)], {
     type: 'application/json',
@@ -204,6 +261,7 @@ export async function importBackup(file) {
       tags: Array.isArray(raw.tags) ? raw.tags : [],
       pinned: !!raw.pinned,
       locked: !!raw.locked,
+      folderId: raw.folderId || null,
       createdAt: raw.createdAt || Date.now(),
       updatedAt: raw.updatedAt || Date.now(),
     };
@@ -223,6 +281,33 @@ export async function importBackup(file) {
       const idx = vault.items.findIndex((i) => i.id === item.id);
       if (idx >= 0) vault.items[idx] = item;
       else vault.items.push(item);
+    }
+  }
+
+  // Merge folders from backup (if present)
+  const incomingFolders = Array.isArray(data.folders) ? data.folders : [];
+  const folderById = new Map(vault.folders.map((f) => [f.id, f]));
+  const foldersToWrite = [];
+  for (const raw of incomingFolders) {
+    if (!raw || !raw.id || !raw.name) continue;
+    const folder = {
+      id: raw.id,
+      name: raw.name,
+      category: raw.category || 'all',
+      createdAt: raw.createdAt || Date.now(),
+      updatedAt: raw.updatedAt || Date.now(),
+    };
+    const existing = folderById.get(folder.id);
+    if (!existing || (folder.updatedAt || 0) > (existing.updatedAt || 0)) {
+      foldersToWrite.push(folder);
+    }
+  }
+  if (foldersToWrite.length) {
+    await db.bulkPutFolders(foldersToWrite);
+    for (const folder of foldersToWrite) {
+      const idx = vault.folders.findIndex((f) => f.id === folder.id);
+      if (idx >= 0) vault.folders[idx] = folder;
+      else vault.folders.push(folder);
     }
   }
   return { added, updated };

@@ -1,6 +1,6 @@
 <script>
   import { CATEGORIES } from '../lib/categories.js';
-  import { saveItem, toast } from '../lib/store.svelte.js';
+  import { vault, saveItem, toast } from '../lib/store.svelte.js';
 
   let { item, onclose } = $props();
 
@@ -10,9 +10,15 @@
   let description = $state(item.description || '');
   let content = $state(item.content || '');
   let tagsText = $state((item.tags || []).join(', '));
+  let folderId = $state(item.folderId || '');
   let saving = $state(false);
 
   const isLink = $derived(type === 'link');
+  const folderOptions = $derived(
+    vault.folders
+      .filter((f) => f.category === type || f.category === 'all')
+      .sort((a, b) => a.name.localeCompare(b.name))
+  );
 
   async function save() {
     if (!content.trim()) {
@@ -24,7 +30,17 @@
       .split(',')
       .map((t) => t.trim().replace(/^#/, ''))
       .filter(Boolean);
-    await saveItem({ id: item.id, type, title, description, content, tags });
+    const validFolder =
+      folderId && folderOptions.some((f) => f.id === folderId) ? folderId : null;
+    await saveItem({
+      id: item.id,
+      type,
+      title,
+      description,
+      content,
+      tags,
+      folderId: validFolder,
+    });
     saving = false;
     toast(isNew ? 'Saved to your kaban ✓' : 'Changes saved ✓');
     onclose();
@@ -120,6 +136,22 @@
             : 'Paste or write your prompt here…'}
           class="mb-4 w-full resize-y rounded-xl border border-line bg-paper px-3.5 py-2.5 text-[13px] leading-relaxed focus:border-teal focus:outline-none {type === 'note' ? '' : 'font-mono'}"
         ></textarea>
+      {/if}
+
+      {#if folderOptions.length}
+        <label class="mb-1 block text-[12px] font-semibold text-ink-soft" for="kb-folder">
+          Folder <span class="font-normal">(optional)</span>
+        </label>
+        <select
+          id="kb-folder"
+          bind:value={folderId}
+          class="mb-4 w-full appearance-none rounded-xl border border-line bg-paper px-3.5 py-2.5 text-[14px] focus:border-teal focus:outline-none"
+        >
+          <option value="">No folder</option>
+          {#each folderOptions as f (f.id)}
+            <option value={f.id}>{f.name}</option>
+          {/each}
+        </select>
       {/if}
 
       <label class="mb-1 block text-[12px] font-semibold text-ink-soft" for="kb-tags">
