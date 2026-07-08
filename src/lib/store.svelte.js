@@ -139,6 +139,44 @@ export function exportBackup() {
   URL.revokeObjectURL(url);
 }
 
+// Share selected cards as a JSON file (same format as backup, so the
+// receiver can import it via Backup & Restore -> Restore from file).
+export async function shareItems(ids) {
+  const items = vault.items.filter((i) => ids.includes(i.id)).map(plain);
+  if (!items.length) return 'empty';
+  const payload = {
+    app: 'kaban',
+    version: 1,
+    exportedAt: new Date().toISOString(),
+    items,
+  };
+  const json = JSON.stringify(payload, null, 2);
+  const stamp = new Date().toISOString().slice(0, 10);
+  const filename = `kaban-share-${stamp}.json`;
+  const file = new File([json], filename, { type: 'application/json' });
+
+  if (navigator.canShare && navigator.canShare({ files: [file] })) {
+    try {
+      await navigator.share({
+        files: [file],
+        title: 'Kaban cards',
+        text: `${items.length} card${items.length === 1 ? '' : 's'} from my Kaban vault`,
+      });
+      return 'shared';
+    } catch (e) {
+      if (e.name === 'AbortError') return 'cancelled';
+      // fall through to download
+    }
+  }
+  const url = URL.createObjectURL(new Blob([json], { type: 'application/json' }));
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
+  return 'downloaded';
+}
+
 export async function importBackup(file) {
   const text = await file.text();
   let data;

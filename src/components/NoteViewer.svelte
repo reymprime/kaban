@@ -4,6 +4,7 @@
   let { item, onclose } = $props();
 
   let mode = $state('read'); // 'read' | 'edit'
+  let focusMode = $state(false); // full-screen textarea only (no title/desc/tags)
 
   // Local copy so the viewer always shows fresh data after saving
   let current = $state({ ...item, tags: [...item.tags] });
@@ -51,6 +52,7 @@
     });
     current = { ...saved, tags: [...saved.tags] };
     saving = false;
+    focusMode = false;
     mode = 'read';
     toast('Changes saved ✓');
   }
@@ -187,9 +189,21 @@
         class="mb-3 w-full rounded-xl border border-line bg-paper px-3.5 py-2.5 text-[14px] focus:border-teal focus:outline-none"
       />
 
-      <label class="mb-1 block text-[12px] font-semibold text-ink-soft" for="nv-content">
-        Note
-      </label>
+      <div class="mb-1 flex items-center justify-between">
+        <label class="block text-[12px] font-semibold text-ink-soft" for="nv-content">
+          Note
+        </label>
+        <button
+          class="flex items-center gap-1 rounded-lg px-1.5 py-1 text-[11px] font-semibold text-teal active:bg-paper"
+          aria-label="Focus mode — full screen writing"
+          onclick={() => (focusMode = true)}
+        >
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7" />
+          </svg>
+          Focus
+        </button>
+      </div>
       <textarea
         id="nv-content"
         bind:value={content}
@@ -225,6 +239,40 @@
       >
         Save changes
       </button>
+    </div>
+  {/if}
+
+  {#if focusMode}
+    <!-- FOCUS MODE: pure full-screen writing, walang title/description/tags -->
+    <div class="absolute inset-0 z-10 flex flex-col bg-card">
+      <div
+        class="flex items-center justify-between border-b border-line px-3 py-2"
+        style="padding-top: calc(0.5rem + env(safe-area-inset-top));"
+      >
+        <button
+          class="flex items-center gap-1 rounded-lg px-2 py-1.5 text-[12px] font-semibold text-ink-soft active:bg-paper"
+          aria-label="Exit focus mode"
+          onclick={() => (focusMode = false)}
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M4 14h6v6M20 10h-6V4M14 10l7-7M3 21l7-7" />
+          </svg>
+          Exit focus
+        </button>
+        <button
+          class="rounded-xl bg-teal px-4 py-1.5 text-[12px] font-semibold text-white active:opacity-90 disabled:opacity-50"
+          disabled={saving}
+          onclick={save}
+        >
+          Save
+        </button>
+      </div>
+      <textarea
+        bind:value={content}
+        placeholder="Just write…"
+        class="w-full flex-1 resize-none bg-card px-5 py-4 text-[16px] leading-relaxed focus:outline-none"
+        style="padding-bottom: calc(1rem + env(safe-area-inset-bottom));"
+      ></textarea>
     </div>
   {/if}
 </div>

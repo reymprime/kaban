@@ -1,6 +1,6 @@
 <script>
   import { onMount } from 'svelte';
-  import { vault, loadVault } from './lib/store.svelte.js';
+  import { vault, loadVault, shareItems, toast } from './lib/store.svelte.js';
   import { TABS } from './lib/categories.js';
   import Header from './components/Header.svelte';
   import Card from './components/Card.svelte';
@@ -16,6 +16,43 @@
   let deleting = $state(null); // item pending delete confirmation
   let viewing = $state(null); // note being viewed full screen
   let showBackup = $state(false);
+
+  // Select-to-share mode
+  let selecting = $state(false);
+  let selected = $state([]);
+  let sharing = $state(false);
+
+  function startSelect(id) {
+    if (selecting) return;
+    selecting = true;
+    selected = [id];
+    if (navigator.vibrate) navigator.vibrate(20);
+  }
+
+  function toggleSelect(id) {
+    selected = selected.includes(id)
+      ? selected.filter((x) => x !== id)
+      : [...selected, id];
+  }
+
+  function cancelSelect() {
+    selecting = false;
+    selected = [];
+  }
+
+  function selectAllVisible() {
+    selected = filtered.map((i) => i.id);
+  }
+
+  async function handleShare() {
+    if (!selected.length) return;
+    sharing = true;
+    const result = await shareItems(selected);
+    sharing = false;
+    if (result === 'shared') toast('Shared ✓');
+    else if (result === 'downloaded') toast('JSON file downloaded ✓');
+    if (result !== 'cancelled') cancelSelect();
+  }
 
   onMount(loadVault);
 
@@ -107,9 +144,13 @@
         {#each filtered as item (item.id)}
           <Card
             {item}
+            {selecting}
+            isSelected={selected.includes(item.id)}
             onedit={() => (editing = item)}
             ondelete={() => (deleting = item)}
             onview={() => (viewing = item)}
+            onselectstart={() => startSelect(item.id)}
+            ontoggleselect={() => toggleSelect(item.id)}
           />
         {/each}
       </ul>
@@ -117,16 +158,54 @@
   </main>
 
   <!-- FAB -->
-  <button
-    class="fixed bottom-6 right-5 z-30 flex h-14 w-14 items-center justify-center rounded-2xl bg-teal text-white shadow-lg shadow-teal/30 transition-transform active:scale-95"
-    style="margin-bottom: env(safe-area-inset-bottom);"
-    aria-label="Add new item"
-    onclick={newItem}
-  >
-    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round">
-      <path d="M12 5v14M5 12h14" />
-    </svg>
-  </button>
+  {#if !selecting}
+    <button
+      class="fixed bottom-6 right-5 z-30 flex h-14 w-14 items-center justify-center rounded-2xl bg-teal text-white shadow-lg shadow-teal/30 transition-transform active:scale-95"
+      style="margin-bottom: env(safe-area-inset-bottom);"
+      aria-label="Add new item"
+      onclick={newItem}
+    >
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round">
+        <path d="M12 5v14M5 12h14" />
+      </svg>
+    </button>
+  {:else}
+    <!-- Selection action bar -->
+    <div
+      class="pop-in fixed bottom-0 left-1/2 z-30 flex w-full max-w-lg -translate-x-1/2 items-center gap-2 border-t border-line bg-card px-4 py-3"
+      style="padding-bottom: calc(0.75rem + env(safe-area-inset-bottom));"
+    >
+      <button
+        class="flex h-10 w-10 items-center justify-center rounded-xl border border-line text-ink-soft active:bg-paper"
+        aria-label="Cancel selection"
+        onclick={cancelSelect}
+      >
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+          <path d="M18 6 6 18M6 6l12 12" />
+        </svg>
+      </button>
+      <span class="flex-1 text-[14px] font-semibold">
+        {selected.length} selected
+      </span>
+      <button
+        class="rounded-xl border border-line px-3 py-2.5 text-[13px] font-semibold text-ink-soft active:bg-paper"
+        onclick={selectAllVisible}
+      >
+        Select all
+      </button>
+      <button
+        class="flex items-center gap-1.5 rounded-xl bg-teal px-4 py-2.5 text-[13px] font-semibold text-white active:opacity-90 disabled:opacity-50"
+        disabled={!selected.length || sharing}
+        onclick={handleShare}
+      >
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="18" cy="5" r="3" /><circle cx="6" cy="12" r="3" /><circle cx="18" cy="19" r="3" />
+          <path d="m8.6 13.5 6.8 4M15.4 6.5l-6.8 4" />
+        </svg>
+        {sharing ? 'Sharing…' : 'Share'}
+      </button>
+    </div>
+  {/if}
 
   {#if viewing}
     <NoteViewer item={viewing} onclose={() => (viewing = null)} />

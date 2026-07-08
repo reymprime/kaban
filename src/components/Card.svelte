@@ -3,7 +3,26 @@
   import { detectPlatform, normalizeUrl } from '../lib/platform.js';
   import { copyText, togglePin, toggleLock, toast } from '../lib/store.svelte.js';
 
-  let { item, onedit, ondelete, onview } = $props();
+  let {
+    item,
+    selecting = false,
+    isSelected = false,
+    onedit,
+    ondelete,
+    onview,
+    onselectstart,
+    ontoggleselect,
+  } = $props();
+
+  // Long-press detection (500ms) to enter selection mode
+  let pressTimer = null;
+  function pressStart() {
+    if (selecting) return;
+    pressTimer = setTimeout(() => onselectstart?.(), 500);
+  }
+  function pressCancel() {
+    clearTimeout(pressTimer);
+  }
 
   const cat = $derived(CATEGORIES[item.type]);
   const platform = $derived(item.type === 'link' ? detectPlatform(item.content) : null);
@@ -40,9 +59,31 @@
 </script>
 
 <li
-  class="relative overflow-hidden rounded-2xl border bg-card {locked ? 'border-ink/15' : 'border-line'}"
-  style="border-left: 4px solid {cat.color};"
+  class="relative overflow-hidden rounded-2xl border bg-card transition-shadow
+    {isSelected ? 'border-teal shadow-[0_0_0_2px_var(--color-teal)]' : locked ? 'border-ink/15' : 'border-line'}"
+  style="border-left: 4px solid {isSelected ? 'var(--color-teal)' : cat.color};"
+  onpointerdown={pressStart}
+  onpointerup={pressCancel}
+  onpointermove={pressCancel}
+  onpointerleave={pressCancel}
+  oncontextmenu={(e) => e.preventDefault()}
 >
+  {#if selecting}
+    <!-- Selection overlay: tap anywhere to toggle -->
+    <button
+      class="absolute inset-0 z-10"
+      aria-label={isSelected ? 'Deselect card' : 'Select card'}
+      onclick={ontoggleselect}
+    ></button>
+    <span
+      class="absolute right-3 top-3 z-10 flex h-6 w-6 items-center justify-center rounded-full border-2
+        {isSelected ? 'border-teal bg-teal text-white' : 'border-line bg-card text-transparent'}"
+    >
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+        <path d="m5 13 4 4L19 7" />
+      </svg>
+    </span>
+  {/if}
   <div class="p-4 pb-3">
     <div class="mb-1.5 flex items-start justify-between gap-2">
       <div class="min-w-0">
