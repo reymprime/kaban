@@ -3,6 +3,28 @@
 
   let palette = $state(null); // 'color' | 'highlight' | 'size' | null
 
+  // Which formats are active at the current cursor/selection
+  let active = $state({ bold: false, italic: false, underline: false, strike: false });
+
+  function refresh() {
+    try {
+      active = {
+        bold: document.queryCommandState('bold'),
+        italic: document.queryCommandState('italic'),
+        underline: document.queryCommandState('underline'),
+        strike: document.queryCommandState('strikeThrough'),
+      };
+    } catch {
+      /* no-op */
+    }
+  }
+
+  $effect(() => {
+    document.addEventListener('selectionchange', refresh);
+    refresh();
+    return () => document.removeEventListener('selectionchange', refresh);
+  });
+
   const COLORS = [
     { v: '#16181D', label: 'Ink' },
     { v: '#0F766E', label: 'Teal' },
@@ -27,6 +49,7 @@
 
   function exec(cmd, val = null) {
     document.execCommand(cmd, false, val);
+    refresh();
   }
 
   // preventDefault on pointerdown keeps the text selection + keyboard alive
@@ -93,32 +116,36 @@
 
   <div class="flex items-center gap-0.5 px-2 py-1.5">
     <button
-      class="flex h-9 w-9 items-center justify-center rounded-lg font-display text-[16px] font-extrabold text-ink active:bg-paper"
+      class="flex h-9 w-9 items-center justify-center rounded-lg font-display text-[16px] font-extrabold active:bg-paper {active.bold ? 'bg-teal-soft text-teal' : 'text-ink'}"
       aria-label="Bold"
+      aria-pressed={active.bold}
       onpointerdown={pd}
       onclick={() => exec('bold')}
     >
       B
     </button>
     <button
-      class="flex h-9 w-9 items-center justify-center rounded-lg font-display text-[16px] font-bold italic text-ink active:bg-paper"
+      class="flex h-9 w-9 items-center justify-center rounded-lg font-display text-[16px] font-bold italic active:bg-paper {active.italic ? 'bg-teal-soft text-teal' : 'text-ink'}"
       aria-label="Italic"
+      aria-pressed={active.italic}
       onpointerdown={pd}
       onclick={() => exec('italic')}
     >
       I
     </button>
     <button
-      class="flex h-9 w-9 items-center justify-center rounded-lg font-display text-[16px] font-bold text-ink underline underline-offset-2 active:bg-paper"
+      class="flex h-9 w-9 items-center justify-center rounded-lg font-display text-[16px] font-bold underline underline-offset-2 active:bg-paper {active.underline ? 'bg-teal-soft text-teal' : 'text-ink'}"
       aria-label="Underline"
+      aria-pressed={active.underline}
       onpointerdown={pd}
       onclick={() => exec('underline')}
     >
       U
     </button>
     <button
-      class="flex h-9 w-9 items-center justify-center rounded-lg font-display text-[16px] font-bold text-ink line-through active:bg-paper"
+      class="flex h-9 w-9 items-center justify-center rounded-lg font-display text-[16px] font-bold line-through active:bg-paper {active.strike ? 'bg-teal-soft text-teal' : 'text-ink'}"
       aria-label="Strikethrough"
+      aria-pressed={active.strike}
       onpointerdown={pd}
       onclick={() => exec('strikeThrough')}
     >
