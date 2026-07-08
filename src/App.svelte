@@ -2,6 +2,7 @@
   import { onMount } from 'svelte';
   import { vault, loadVault, shareItems, toast } from './lib/store.svelte.js';
   import { TABS, CATEGORIES } from './lib/categories.js';
+  import { stripForSearch } from './lib/richtext.js';
   import Header from './components/Header.svelte';
   import Card from './components/Card.svelte';
   import EditorModal from './components/EditorModal.svelte';
@@ -82,7 +83,7 @@
       list = list.filter(
         (i) =>
           i.title.toLowerCase().includes(q) ||
-          i.content.toLowerCase().includes(q) ||
+          stripForSearch(i.content).toLowerCase().includes(q) ||
           (i.description || '').toLowerCase().includes(q) ||
           i.tags.some((t) => t.toLowerCase().includes(q))
       );

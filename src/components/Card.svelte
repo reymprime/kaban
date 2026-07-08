@@ -2,6 +2,7 @@
   import { CATEGORIES } from '../lib/categories.js';
   import { detectPlatform, normalizeUrl } from '../lib/platform.js';
   import { copyText, togglePin, toggleLock, toast } from '../lib/store.svelte.js';
+  import { htmlToText } from '../lib/richtext.js';
 
   let {
     item,
@@ -29,13 +30,15 @@
   const locked = $derived(!!item.locked);
   // Links lose copy access when locked; prompts and notes keep copy
   const copyBlocked = $derived(locked && item.type === 'link');
+  // Rich notes are stored as HTML — preview and copy use plain text
+  const noteText = $derived(item.type === 'note' ? htmlToText(item.content) : '');
 
   // Lock icon animation — re-keyed to replay CSS animation each press
   let anim = $state({ n: 0, type: '' });
 
   async function handleCopy() {
     if (copyBlocked) return denied();
-    const ok = await copyText(item.content);
+    const ok = await copyText(item.type === 'note' ? noteText : item.content);
     toast(ok ? 'Copied to clipboard ✓' : 'Copy failed — try again');
   }
 
@@ -162,7 +165,7 @@
     {:else if item.type === 'note'}
       <button class="block w-full text-left" onclick={onview} aria-label="Open note full screen">
         <p class="clamp-3 whitespace-pre-wrap text-[13px] leading-relaxed text-ink-soft">
-          {item.content}
+          {noteText}
         </p>
         <span class="mt-1 inline-flex items-center gap-1 text-[12px] font-semibold text-cat-note">
           Read full note

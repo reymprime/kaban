@@ -1,10 +1,14 @@
 <script>
+  import { tick } from 'svelte';
   import { copyText, saveItem, toast } from '../lib/store.svelte.js';
+  import { isHtml, textToHtml, htmlToText, sanitizeHtml } from '../lib/richtext.js';
+  import FormatBar from './FormatBar.svelte';
 
   let { item, onclose } = $props();
 
   let mode = $state('read'); // 'read' | 'edit'
-  let focusMode = $state(false); // full-screen textarea only (no title/desc/tags)
+  let focusMode = $state(false); // full-screen writing only
+  let showBar = $state(true); // formatting bar visibility
 
   // Local copy so the viewer always shows fresh data after saving
   let current = $state({ ...item, tags: [...item.tags] });
@@ -12,28 +16,52 @@
   // Edit fields
   let title = $state('');
   let description = $state('');
-  let content = $state('');
   let tagsText = $state('');
+  let htmlBody = $state(''); // rich content while editing
   let saving = $state(false);
 
-  function startEdit() {
+  let editEl = $state(null);
+  let focusEl = $state(null);
+
+  async function startEdit() {
     if (current.locked) {
       toast('Locked — unlock the card first to edit');
       return;
     }
     title = current.title;
     description = current.description || '';
-    content = current.content;
     tagsText = current.tags.join(', ');
+    htmlBody = isHtml(current.content)
+      ? sanitizeHtml(current.content)
+      : textToHtml(current.content);
     mode = 'edit';
+    await tick();
+    if (editEl) editEl.innerHTML = htmlBody;
   }
 
   function cancelEdit() {
     mode = 'read';
+    focusMode = false;
+  }
+
+  async function enterFocus() {
+    focusMode = true;
+    await tick();
+    if (focusEl) {
+      focusEl.innerHTML = htmlBody;
+      focusEl.focus();
+    }
+  }
+
+  async function exitFocus() {
+    focusMode = false;
+    await tick();
+    if (editEl) editEl.innerHTML = htmlBody;
   }
 
   async function save() {
-    if (!content.trim()) {
+    const plainTxt = htmlToText(htmlBody).trim();
+    if (!plainTxt) {
       toast('Note cannot be empty');
       return;
     }
@@ -47,7 +75,7 @@
       type: current.type,
       title,
       description,
-      content,
+      content: sanitizeHtml(htmlBody),
       tags,
     });
     current = { ...saved, tags: [...saved.tags] };
@@ -58,7 +86,7 @@
   }
 
   async function handleCopy() {
-    const ok = await copyText(current.content);
+    const ok = await copyText(htmlToText(current.content));
     toast(ok ? 'Copied to clipboard ✓' : 'Copy failed — try again');
   }
 
@@ -136,9 +164,15 @@
       {:else}
         <div class="mb-4"></div>
       {/if}
-      <p class="whitespace-pre-wrap text-[15px] leading-relaxed text-ink">
-        {current.content}
-      </p>
+      {#if isHtml(current.content)}
+        <div class="note-body text-[15px] leading-relaxed text-ink">
+          {@html sanitizeHtml(current.content)}
+        </div>
+      {:else}
+        <p class="whitespace-pre-wrap text-[15px] leading-relaxed text-ink">
+          {current.content}
+        </p>
+      {/if}
     </div>
 
     <div
@@ -160,7 +194,7 @@
       >
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <rect x="9" y="9" width="12" height="12" rx="2" />
-          <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+          <path d="M5 15H4a2 2 0 0 1 2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
         </svg>
         Copy
       </button>
@@ -190,25 +224,39 @@
       />
 
       <div class="mb-1 flex items-center justify-between">
-        <label class="block text-[12px] font-semibold text-ink-soft" for="nv-content">
-          Note
-        </label>
-        <button
-          class="flex items-center gap-1 rounded-lg px-1.5 py-1 text-[11px] font-semibold text-teal active:bg-paper"
-          aria-label="Focus mode — full screen writing"
-          onclick={() => (focusMode = true)}
-        >
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7" />
-          </svg>
-          Focus
-        </button>
+        <span class="block text-[12px] font-semibold text-ink-soft">Note</span>
+        <div class="flex items-center gap-1">
+          {#if !showBar}
+            <button
+              class="flex items-center gap-1 rounded-lg px-1.5 py-1 text-[11px] font-semibold text-teal active:bg-paper"
+              aria-label="Show formatting bar"
+              onclick={() => (showBar = true)}
+            >
+              <span class="font-display font-extrabold">Aa</span>
+              Format
+            </button>
+          {/if}
+          <button
+            class="flex items-center gap-1 rounded-lg px-1.5 py-1 text-[11px] font-semibold text-teal active:bg-paper"
+            aria-label="Focus mode — full screen writing"
+            onclick={enterFocus}
+          >
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7" />
+            </svg>
+            Focus
+          </button>
+        </div>
       </div>
-      <textarea
-        id="nv-content"
-        bind:value={content}
-        class="mb-3 min-h-[40dvh] w-full flex-1 resize-none rounded-xl border border-line bg-paper px-3.5 py-2.5 text-[15px] leading-relaxed focus:border-teal focus:outline-none"
-      ></textarea>
+      <div
+        bind:this={editEl}
+        contenteditable="true"
+        role="textbox"
+        aria-multiline="true"
+        aria-label="Note content"
+        oninput={() => (htmlBody = editEl.innerHTML)}
+        class="rich-editor mb-3 min-h-[38dvh] w-full flex-1 rounded-xl border border-line bg-paper px-3.5 py-2.5 text-[15px] leading-relaxed focus:border-teal focus:outline-none"
+      ></div>
 
       <label class="mb-1 block text-[12px] font-semibold text-ink-soft" for="nv-tags">
         Tags <span class="font-normal">(comma separated, optional)</span>
@@ -221,6 +269,10 @@
         class="w-full rounded-xl border border-line bg-paper px-3.5 py-2.5 text-[14px] focus:border-teal focus:outline-none"
       />
     </div>
+
+    {#if showBar}
+      <FormatBar onclose={() => (showBar = false)} />
+    {/if}
 
     <div
       class="flex gap-2 border-t border-line p-4"
@@ -243,7 +295,7 @@
   {/if}
 
   {#if focusMode}
-    <!-- FOCUS MODE: pure full-screen writing, walang title/description/tags -->
+    <!-- FOCUS MODE: pure full-screen writing -->
     <div class="absolute inset-0 z-10 flex flex-col bg-card">
       <div
         class="flex items-center justify-between border-b border-line px-3 py-2"
@@ -252,27 +304,45 @@
         <button
           class="flex items-center gap-1 rounded-lg px-2 py-1.5 text-[12px] font-semibold text-ink-soft active:bg-paper"
           aria-label="Exit focus mode"
-          onclick={() => (focusMode = false)}
+          onclick={exitFocus}
         >
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M4 14h6v6M20 10h-6V4M14 10l7-7M3 21l7-7" />
           </svg>
           Exit focus
         </button>
-        <button
-          class="rounded-xl bg-teal px-4 py-1.5 text-[12px] font-semibold text-white active:opacity-90 disabled:opacity-50"
-          disabled={saving}
-          onclick={save}
-        >
-          Save
-        </button>
+        <div class="flex items-center gap-2">
+          {#if !showBar}
+            <button
+              class="rounded-lg px-2 py-1.5 font-display text-[13px] font-extrabold text-teal active:bg-paper"
+              aria-label="Show formatting bar"
+              onclick={() => (showBar = true)}
+            >
+              Aa
+            </button>
+          {/if}
+          <button
+            class="rounded-xl bg-teal px-4 py-1.5 text-[12px] font-semibold text-white active:opacity-90 disabled:opacity-50"
+            disabled={saving}
+            onclick={save}
+          >
+            Save
+          </button>
+        </div>
       </div>
-      <textarea
-        bind:value={content}
-        placeholder="Just write…"
-        class="w-full flex-1 resize-none bg-card px-5 py-4 text-[16px] leading-relaxed focus:outline-none"
+      <div
+        bind:this={focusEl}
+        contenteditable="true"
+        role="textbox"
+        aria-multiline="true"
+        aria-label="Note content"
+        oninput={() => (htmlBody = focusEl.innerHTML)}
+        class="rich-editor w-full flex-1 overflow-y-auto bg-card px-5 py-4 text-[16px] leading-relaxed focus:outline-none"
         style="padding-bottom: calc(1rem + env(safe-area-inset-bottom));"
-      ></textarea>
+      ></div>
+      {#if showBar}
+        <FormatBar onclose={() => (showBar = false)} />
+      {/if}
     </div>
   {/if}
 </div>
