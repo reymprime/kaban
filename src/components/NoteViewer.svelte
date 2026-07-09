@@ -21,7 +21,6 @@
   let htmlBody = $state(''); // rich content while editing
   let saving = $state(false);
 
-  let editEl = $state(null);
   let focusEl = $state(null);
 
   // ---- Draft auto-save (accident insurance) ----
@@ -82,8 +81,6 @@
     }
 
     mode = 'edit';
-    await tick();
-    if (editEl) editEl.innerHTML = htmlBody;
   }
 
   function cancelEdit() {
@@ -92,12 +89,15 @@
     focusMode = false;
   }
 
-  // Open straight into Edit Mode for freshly created notes
+  // Freshly created notes open straight into the full-screen writer
   let booted = false;
   $effect(() => {
     if (autoEdit && !booted) {
       booted = true;
-      startEdit();
+      (async () => {
+        await startEdit();
+        await enterFocus();
+      })();
     }
   });
 
@@ -112,8 +112,6 @@
 
   async function exitFocus() {
     focusMode = false;
-    await tick();
-    if (editEl) editEl.innerHTML = htmlBody;
   }
 
   async function save() {
@@ -286,38 +284,16 @@
 
       <div class="mb-1 flex items-center justify-between">
         <span class="block text-[12px] font-semibold text-ink-soft">Note</span>
-        <div class="flex items-center gap-1">
-          {#if !showBar}
-            <button
-              class="flex items-center gap-1 rounded-lg px-1.5 py-1 text-[11px] font-semibold text-teal active:bg-paper"
-              aria-label="Show formatting bar"
-              onclick={() => (showBar = true)}
-            >
-              <span class="font-display font-extrabold">Aa</span>
-              Format
-            </button>
-          {/if}
-          <button
-            class="flex items-center gap-1 rounded-lg px-1.5 py-1 text-[11px] font-semibold text-teal active:bg-paper"
-            aria-label="Focus mode — full screen writing"
-            onclick={enterFocus}
-          >
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7" />
-            </svg>
-            Focus
-          </button>
-        </div>
       </div>
-      <div
-        bind:this={editEl}
-        contenteditable="true"
-        role="textbox"
-        aria-multiline="true"
-        aria-label="Note content"
-        oninput={() => { htmlBody = editEl.innerHTML; scheduleDraft(); }}
-        class="rich-editor mb-3 min-h-[38dvh] w-full flex-1 rounded-xl border border-line bg-paper px-3.5 py-2.5 text-[15px] leading-relaxed focus:border-teal focus:outline-none"
-      ></div>
+      <button
+        class="mb-3 flex w-full items-center justify-center gap-2 rounded-xl border-2 border-dashed border-teal/50 bg-teal-soft/40 py-4 text-[14px] font-semibold text-teal active:bg-teal-soft"
+        onclick={enterFocus}
+      >
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M17 3a2.8 2.8 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3Z" />
+        </svg>
+        Open Note Writer
+      </button>
 
       <label class="mb-1 block text-[12px] font-semibold text-ink-soft" for="nv-tags">
         Tags <span class="font-normal">(comma separated, optional)</span>
@@ -331,10 +307,6 @@
         class="w-full rounded-xl border border-line bg-paper px-3.5 py-2.5 text-[14px] focus:border-teal focus:outline-none"
       />
     </div>
-
-    {#if showBar}
-      <FormatBar onclose={() => (showBar = false)} />
-    {/if}
 
     <div
       class="flex gap-2 border-t border-line p-4"
