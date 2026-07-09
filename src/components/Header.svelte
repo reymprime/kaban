@@ -1,8 +1,20 @@
 <script>
   import CreditModal from './CreditModal.svelte';
+  import { vault, lockNow, toast } from '../lib/store.svelte.js';
 
   let { query = $bindable(''), onbackup } = $props();
   let showCredits = $state(false);
+
+  function shieldTap() {
+    if (!vault.security.configured) {
+      vault.securityPrompt = 'setup';
+    } else if (!vault.security.unlocked) {
+      vault.securityPrompt = 'unlock';
+    } else {
+      lockNow();
+      toast('Vault locked');
+    }
+  }
 </script>
 
 <header class="px-4 pb-3 pt-4">
@@ -27,20 +39,42 @@
           Kaban
         </h1>
         <p class="mt-0.5 text-[11px] font-medium text-ink-soft">
-          Prompt vault by Gnokz
+          Prompt vault ni Gnokz
         </p>
       </div>
     </button>
-    <button
-      class="flex h-9 w-9 items-center justify-center rounded-xl border border-line bg-card text-ink-soft transition-colors active:bg-line"
-      aria-label="Backup and restore"
-      onclick={onbackup}
-    >
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M12 3v12m0 0-4-4m4 4 4-4" />
-        <path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2" />
-      </svg>
-    </button>
+    <div class="flex items-center gap-2">
+      <button
+        class="flex h-9 w-9 items-center justify-center rounded-xl border transition-colors active:bg-line
+          {vault.security.unlocked ? 'border-teal bg-teal-soft text-teal' : 'border-line bg-card text-ink-soft'}"
+        aria-label={!vault.security.configured
+          ? 'Set vault password'
+          : vault.security.unlocked
+            ? 'Lock vault'
+            : 'Unlock vault'}
+        onclick={shieldTap}
+      >
+        {#if vault.security.unlocked}
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M12 2 4 5v6c0 5 3.4 9.4 8 11 4.6-1.6 8-6 8-11V5l-8-3Zm-1.2 13.4-2.8-2.8 1.4-1.4 1.4 1.4 3.6-3.6 1.4 1.4-5 5Z" />
+          </svg>
+        {:else}
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 2 4 5v6c0 5 3.4 9.4 8 11 4.6-1.6 8-6 8-11V5l-8-3Z" />
+          </svg>
+        {/if}
+      </button>
+      <button
+        class="flex h-9 w-9 items-center justify-center rounded-xl border border-line bg-card text-ink-soft transition-colors active:bg-line"
+        aria-label="Backup and restore"
+        onclick={onbackup}
+      >
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 3v12m0 0-4-4m4 4 4-4" />
+          <path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2" />
+        </svg>
+      </button>
+    </div>
   </div>
 
   <div class="relative">

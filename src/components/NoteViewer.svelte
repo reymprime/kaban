@@ -78,7 +78,8 @@
       content: sanitizeHtml(htmlBody),
       tags,
     });
-    current = { ...saved, tags: [...saved.tags] };
+    // Keep the readable content locally — saved.content may be encrypted
+    current = { ...saved, tags: [...saved.tags], content: sanitizeHtml(htmlBody) };
     saving = false;
     focusMode = false;
     mode = 'read';

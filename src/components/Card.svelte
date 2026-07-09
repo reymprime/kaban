@@ -1,7 +1,7 @@
 <script>
   import { CATEGORIES } from '../lib/categories.js';
   import { detectPlatform, normalizeUrl } from '../lib/platform.js';
-  import { copyText, togglePin, toggleLock, toast } from '../lib/store.svelte.js';
+  import { vault, copyText, togglePin, toggleLock, setProtection, toast } from '../lib/store.svelte.js';
   import { htmlToText } from '../lib/richtext.js';
 
   let {
@@ -26,19 +26,49 @@
   }
 
   const cat = $derived(CATEGORIES[item.type]);
-  const platform = $derived(item.type === 'link' ? detectPlatform(item.content) : null);
   const locked = $derived(!!item.locked);
+  const isProtected = $derived(!!item.protected);
+  // Protected content is readable only while the vault is unlocked
+  const accessible = $derived(
+    !isProtected || (vault.security.unlocked && vault.plain[item.id] != null)
+  );
+  const contentText = $derived(
+    isProtected ? (vault.plain[item.id] ?? '') : item.content
+  );
+  const platform = $derived(
+    item.type === 'link' && accessible ? detectPlatform(contentText) : null
+  );
   // Links lose copy access when locked; prompts and notes keep copy
   const copyBlocked = $derived(locked && item.type === 'link');
   // Rich notes are stored as HTML — preview and copy use plain text
-  const noteText = $derived(item.type === 'note' ? htmlToText(item.content) : '');
+  const noteText = $derived(item.type === 'note' ? htmlToText(contentText) : '');
 
   // Lock icon animation — re-keyed to replay CSS animation each press
   let anim = $state({ n: 0, type: '' });
 
+  function promptUnlock() {
+    vault.securityPrompt = vault.security.configured ? 'unlock' : 'setup';
+  }
+
+  async function handleShield() {
+    if (!vault.security.configured) {
+      vault.securityPrompt = 'setup';
+      return;
+    }
+    if (!vault.security.unlocked) {
+      vault.securityPrompt = 'unlock';
+      return;
+    }
+    const turningOn = !item.protected;
+    await setProtection(item, turningOn);
+    anim = { n: anim.n + 1, type: 'lock-pop' };
+    toast(turningOn ? 'Protected — encrypted with your vault password' : 'Protection removed');
+  }
+
   async function handleCopy() {
+    if (!accessible) return promptUnlock();
     if (copyBlocked) return denied();
-    const ok = await copyText(item.type === 'note' ? noteText : item.content);
+    const ok = await copyText(item.type === 'note' ? noteText : contentText);
     toast(ok ? 'Copied to clipboard ✓' : 'Copy failed — try again');
   }
 
@@ -122,30 +152,46 @@
       </div>
 
       <div class="flex shrink-0 items-center">
+        <!-- Shield (password protection) toggle -->
+        <button
+          class="rounded-lg p-1.5 transition-colors active:bg-line {isProtected ? 'text-teal' : 'text-ink-soft/60'}"
+          aria-label={isProtected ? 'Remove protection' : 'Protect with vault password'}
+          onclick={handleShield}
+        >
+          {#key anim.n}
+            <span class="block {anim.type}">
+              {#if isProtected}
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M12 2 4 5v6c0 5 3.4 9.4 8 11 4.6-1.6 8-6 8-11V5l-8-3Zm-1.2 13.4-2.8-2.8 1.4-1.4 1.4 1.4 3.6-3.6 1.4 1.4-5 5Z" />
+                </svg>
+              {:else}
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M12 2 4 5v6c0 5 3.4 9.4 8 11 4.6-1.6 8-6 8-11V5l-8-3Z" />
+                </svg>
+              {/if}
+            </span>
+          {/key}
+        </button>
         <!-- Lock toggle -->
         <button
           class="rounded-lg p-1.5 transition-colors active:bg-line {locked ? 'text-teal' : 'text-ink-soft/60'}"
           aria-label={locked ? 'Unlock' : 'Lock'}
           onclick={handleLock}
         >
-          {#key anim.n}
-            <span class="block {anim.type}">
-              {#if locked}
-                <!-- Closed padlock -->
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <rect x="4" y="11" width="16" height="10" rx="2.5" />
-                  <path d="M8 11V7a4 4 0 0 1 8 0v4" />
-                  <circle cx="12" cy="16" r="1.3" fill="currentColor" stroke="none" />
-                </svg>
-              {:else}
-                <!-- Open padlock -->
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <rect x="4" y="11" width="16" height="10" rx="2.5" />
-                  <path d="M8 11V7a4 4 0 0 1 7.6-1.8" />
-                </svg>
-              {/if}
-            </span>
-          {/key}
+          {#if locked}
+            <!-- Closed padlock -->
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="4" y="11" width="16" height="10" rx="2.5" />
+              <path d="M8 11V7a4 4 0 0 1 8 0v4" />
+              <circle cx="12" cy="16" r="1.3" fill="currentColor" stroke="none" />
+            </svg>
+          {:else}
+            <!-- Open padlock -->
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="4" y="11" width="16" height="10" rx="2.5" />
+              <path d="M8 11V7a4 4 0 0 1 7.6-1.8" />
+            </svg>
+          {/if}
         </button>
         <!-- Pin toggle -->
         <button
@@ -160,8 +206,18 @@
       </div>
     </div>
 
-    {#if item.type === 'link'}
-      <p class="truncate text-[13px] text-ink-soft">{platform.host || item.content}</p>
+    {#if !accessible}
+      <div class="flex items-center gap-2.5 rounded-lg bg-paper p-3">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="var(--color-teal)" class="shrink-0">
+          <path d="M12 2 4 5v6c0 5 3.4 9.4 8 11 4.6-1.6 8-6 8-11V5l-8-3Zm-1.2 13.4-2.8-2.8 1.4-1.4 1.4 1.4 3.6-3.6 1.4 1.4-5 5Z" />
+        </svg>
+        <div>
+          <p class="text-[13px] font-semibold text-ink">Protected</p>
+          <p class="text-[11px] text-ink-soft">Content is encrypted — unlock the vault to view</p>
+        </div>
+      </div>
+    {:else if item.type === 'link'}
+      <p class="truncate text-[13px] text-ink-soft">{platform.host || contentText}</p>
     {:else if item.type === 'note'}
       <button class="block w-full text-left" onclick={onview} aria-label="Open note full screen">
         <p class="clamp-3 whitespace-pre-wrap text-[13px] leading-relaxed text-ink-soft">
@@ -176,7 +232,7 @@
       </button>
     {:else}
       <p class="clamp-3 rounded-lg bg-paper p-2.5 font-mono text-[12px] leading-relaxed text-ink-soft">
-        {item.content}
+        {contentText}
       </p>
     {/if}
 
@@ -193,10 +249,22 @@
 
   <!-- Action row -->
   <div class="flex items-center border-t border-line">
+    {#if !accessible}
+      <button
+        class="flex flex-1 items-center justify-center gap-1.5 py-2.5 text-[13px] font-semibold text-teal transition-colors active:bg-paper"
+        onclick={promptUnlock}
+      >
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="4" y="11" width="16" height="10" rx="2.5" />
+          <path d="M8 11V7a4 4 0 0 1 7.6-1.8" />
+        </svg>
+        Unlock to access
+      </button>
+    {:else}
     {#if item.type === 'link'}
       <a
         class="flex flex-1 items-center justify-center gap-1.5 py-2.5 text-[13px] font-semibold text-cat-link transition-colors active:bg-paper"
-        href={normalizeUrl(item.content)}
+        href={normalizeUrl(contentText)}
         target="_blank"
         rel="noopener noreferrer"
       >
@@ -267,5 +335,6 @@
       {/if}
       Delete
     </button>
+    {/if}
   </div>
 </li>

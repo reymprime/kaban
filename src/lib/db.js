@@ -1,9 +1,10 @@
-// Kaban IndexedDB layer — v2 adds the 'folders' store.
+// Kaban IndexedDB layer — v3 adds the 'meta' store (vault security settings).
 // Existing users upgrade automatically; their items are untouched.
 const DB_NAME = 'kaban-db';
 const ITEMS = 'items';
 const FOLDERS = 'folders';
-const VERSION = 2;
+const META = 'meta';
+const VERSION = 3;
 
 let dbPromise = null;
 
@@ -18,6 +19,9 @@ function openDB() {
       }
       if (!db.objectStoreNames.contains(FOLDERS)) {
         db.createObjectStore(FOLDERS, { keyPath: 'id' });
+      }
+      if (!db.objectStoreNames.contains(META)) {
+        db.createObjectStore(META, { keyPath: 'key' });
       }
     };
     req.onsuccess = () => resolve(req.result);
@@ -87,3 +91,15 @@ export const getAllFolders = () => reqGetAll(FOLDERS);
 export const putFolder = (folder) => reqPut(FOLDERS, folder);
 export const removeFolder = (id) => reqRemove(FOLDERS, id);
 export const bulkPutFolders = (folders) => reqBulkPut(FOLDERS, folders);
+
+// Meta (security settings, etc.)
+export const putMeta = (obj) => reqPut(META, obj);
+export const getMeta = (key) =>
+  openDB().then(
+    (db) =>
+      new Promise((resolve, reject) => {
+        const req = tx(db, META, 'readonly').get(key);
+        req.onsuccess = () => resolve(req.result || null);
+        req.onerror = () => reject(req.error);
+      })
+  );

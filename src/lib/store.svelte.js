@@ -1,14 +1,22 @@
 import * as db from './db.js';
+import { makeSalt, deriveKey, encryptText, decryptText } from './crypto.js';
 
 // Item shape:
-// { id, type: 'image'|'video'|'link'|'note', title, content, tags: [], pinned, createdAt, updatedAt }
+// { id, type, title, content, description, tags, pinned, locked, protected, folderId, createdAt, updatedAt }
 
 export const vault = $state({
   items: [],
   folders: [],
   loaded: false,
   toast: null,
+  security: { configured: false, unlocked: false },
+  securityPrompt: null, // null | 'setup' | 'unlock'
+  plain: {}, // id -> decrypted content while vault is unlocked (memory only)
 });
+
+// Session-only. Never persisted. Cleared on lock or app close.
+let sessionKey = null;
+let securityMeta = null;
 
 let toastTimer = null;
 
@@ -20,15 +28,86 @@ export function toast(message) {
 
 export async function loadVault() {
   try {
-    const [items, folders] = await Promise.all([db.getAll(), db.getAllFolders()]);
+    const [items, folders, meta] = await Promise.all([
+      db.getAll(),
+      db.getAllFolders(),
+      db.getMeta('security'),
+    ]);
     vault.items = items;
     vault.folders = folders;
+    securityMeta = meta;
+    vault.security.configured = !!meta;
   } catch (e) {
     console.error('Failed to load vault:', e);
     vault.items = [];
     vault.folders = [];
   }
   vault.loaded = true;
+}
+
+// ---- Vault password / protection ----
+
+export async function setupPassword(password) {
+  if (securityMeta) throw new Error('Vault password already set');
+  const salt = makeSalt();
+  const key = await deriveKey(password, salt);
+  const verifier = await encryptText(key, 'kaban-ok');
+  const meta = { key: 'security', salt, verifier, createdAt: Date.now() };
+  await db.putMeta(meta);
+  securityMeta = meta;
+  sessionKey = key;
+  vault.security.configured = true;
+  vault.security.unlocked = true;
+}
+
+export async function unlockVault(password) {
+  if (!securityMeta) throw new Error('No vault password set');
+  const key = await deriveKey(password, securityMeta.salt);
+  let ok = false;
+  try {
+    ok = (await decryptText(key, securityMeta.verifier)) === 'kaban-ok';
+  } catch {
+    ok = false;
+  }
+  if (!ok) throw new Error('Wrong password');
+  sessionKey = key;
+  vault.security.unlocked = true;
+  // Decrypt all protected cards into memory for this session
+  for (const i of vault.items) {
+    if (i.protected) {
+      try {
+        vault.plain[i.id] = await decryptText(sessionKey, i.content);
+      } catch {
+        /* corrupted or foreign cipher — leave inaccessible */
+      }
+    }
+  }
+}
+
+export function lockNow() {
+  sessionKey = null;
+  vault.security.unlocked = false;
+  vault.plain = {};
+}
+
+export async function setProtection(item, on) {
+  if (!sessionKey) throw new Error('Vault is locked');
+  const updated = plain(item);
+  if (on) {
+    const pt = item.protected ? vault.plain[item.id] : item.content;
+    updated.content = await encryptText(sessionKey, pt);
+    updated.protected = true;
+    await db.put(updated);
+    vault.plain[item.id] = pt;
+  } else {
+    const pt = vault.plain[item.id] ?? (await decryptText(sessionKey, item.content));
+    updated.content = pt;
+    updated.protected = false;
+    await db.put(updated);
+    delete vault.plain[item.id];
+  }
+  const idx = vault.items.findIndex((i) => i.id === item.id);
+  vault.items[idx] = updated;
 }
 
 export function newId() {
@@ -48,6 +127,7 @@ function plain(i) {
     tags: [...(i.tags || [])],
     pinned: !!i.pinned,
     locked: !!i.locked,
+    protected: !!i.protected,
     folderId: i.folderId || null,
     createdAt: i.createdAt,
     updatedAt: i.updatedAt,
@@ -67,15 +147,18 @@ function plainFolder(f) {
 export async function saveItem(data) {
   const now = Date.now();
   const existing = data.id ? vault.items.find((i) => i.id === data.id) : null;
+  const isProtected = existing ? !!existing.protected : false;
+  const plainContent = (data.content || '').trim();
   const item = {
     id: data.id || newId(),
     type: data.type,
     title: (data.title || '').trim() || 'Untitled',
-    content: (data.content || '').trim(),
+    content: plainContent,
     description: (data.description || '').trim(),
     tags: [...(data.tags || [])],
     pinned: existing ? !!existing.pinned : false,
     locked: existing ? !!existing.locked : false,
+    protected: isProtected,
     // Preserve folder when caller (e.g. NoteViewer) doesn't send folderId
     folderId:
       data.folderId !== undefined
@@ -86,7 +169,13 @@ export async function saveItem(data) {
     createdAt: existing ? existing.createdAt : now,
     updatedAt: now,
   };
+  // Protected cards are stored encrypted — callers always pass plaintext
+  if (isProtected) {
+    if (!sessionKey) throw new Error('Vault is locked');
+    item.content = await encryptText(sessionKey, plainContent);
+  }
   await db.put(item);
+  if (isProtected) vault.plain[item.id] = plainContent;
   if (existing) {
     const idx = vault.items.findIndex((i) => i.id === item.id);
     vault.items[idx] = item;
@@ -135,6 +224,7 @@ export async function deleteItem(id) {
   if (item?.locked) throw new Error('Item is locked');
   await db.remove(id);
   vault.items = vault.items.filter((i) => i.id !== id);
+  delete vault.plain[id];
 }
 
 export async function togglePin(item) {
@@ -183,6 +273,9 @@ export function exportBackup() {
     exportedAt: new Date().toISOString(),
     items: vault.items.map(plain),
     folders: vault.folders.map(plainFolder),
+    security: securityMeta
+      ? { salt: securityMeta.salt, verifier: securityMeta.verifier }
+      : undefined,
   };
   const blob = new Blob([JSON.stringify(payload, null, 2)], {
     type: 'application/json',
@@ -199,8 +292,24 @@ export function exportBackup() {
 // Share selected cards as a JSON file (same format as backup, so the
 // receiver can import it via Backup & Restore -> Restore from file).
 export async function shareItems(ids) {
-  const items = vault.items.filter((i) => ids.includes(i.id)).map(plain);
-  if (!items.length) return 'empty';
+  let skipped = 0;
+  const items = [];
+  for (const i of vault.items) {
+    if (!ids.includes(i.id)) continue;
+    const p = plain(i);
+    if (p.protected) {
+      // Share readable content, not the cipher (useless to the receiver)
+      if (vault.security.unlocked && vault.plain[i.id] != null) {
+        p.content = vault.plain[i.id];
+        p.protected = false;
+      } else {
+        skipped++;
+        continue;
+      }
+    }
+    items.push(p);
+  }
+  if (!items.length) return { status: 'empty', skipped };
   const payload = {
     app: 'kaban',
     version: 1,
@@ -219,9 +328,9 @@ export async function shareItems(ids) {
         title: 'Kaban cards',
         text: `${items.length} card${items.length === 1 ? '' : 's'} from my Kaban vault`,
       });
-      return 'shared';
+      return { status: 'shared', skipped };
     } catch (e) {
-      if (e.name === 'AbortError') return 'cancelled';
+      if (e.name === 'AbortError') return { status: 'cancelled', skipped };
       // fall through to download
     }
   }
@@ -231,7 +340,7 @@ export async function shareItems(ids) {
   a.download = filename;
   a.click();
   URL.revokeObjectURL(url);
-  return 'downloaded';
+  return { status: 'downloaded', skipped };
 }
 
 export async function importBackup(file) {
@@ -261,6 +370,7 @@ export async function importBackup(file) {
       tags: Array.isArray(raw.tags) ? raw.tags : [],
       pinned: !!raw.pinned,
       locked: !!raw.locked,
+      protected: !!raw.protected,
       folderId: raw.folderId || null,
       createdAt: raw.createdAt || Date.now(),
       updatedAt: raw.updatedAt || Date.now(),
@@ -309,6 +419,20 @@ export async function importBackup(file) {
       if (idx >= 0) vault.folders[idx] = folder;
       else vault.folders.push(folder);
     }
+  }
+
+  // Adopt the backup's vault password settings if this device has none
+  // (restoring to a new phone keeps protected cards unlockable with the same password)
+  if (data.security?.salt && data.security?.verifier && !securityMeta) {
+    const meta = {
+      key: 'security',
+      salt: data.security.salt,
+      verifier: data.security.verifier,
+      createdAt: Date.now(),
+    };
+    await db.putMeta(meta);
+    securityMeta = meta;
+    vault.security.configured = true;
   }
   return { added, updated };
 }

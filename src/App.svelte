@@ -10,6 +10,7 @@
   import BackupModal from './components/BackupModal.svelte';
   import NoteViewer from './components/NoteViewer.svelte';
   import FolderModal from './components/FolderModal.svelte';
+  import SecurityModal from './components/SecurityModal.svelte';
   import Toast from './components/Toast.svelte';
 
   let tab = $state('all');
@@ -54,11 +55,16 @@
   async function handleShare() {
     if (!selected.length) return;
     sharing = true;
-    const result = await shareItems(selected);
+    const res = await shareItems(selected);
     sharing = false;
-    if (result === 'shared') toast('Shared ✓');
-    else if (result === 'downloaded') toast('JSON file downloaded ✓');
-    if (result !== 'cancelled') cancelSelect();
+    const skipNote = res.skipped
+      ? ` — ${res.skipped} protected card${res.skipped === 1 ? '' : 's'} skipped`
+      : '';
+    if (res.status === 'shared') toast(`Shared ✓${skipNote}`);
+    else if (res.status === 'downloaded') toast(`JSON file downloaded ✓${skipNote}`);
+    else if (res.status === 'empty')
+      toast('Only protected cards selected — unlock the vault first');
+    if (res.status !== 'cancelled') cancelSelect();
   }
 
   onMount(loadVault);
@@ -80,13 +86,15 @@
       list = list.filter((i) => i.type === tab);
     }
     if (q) {
-      list = list.filter(
-        (i) =>
+      list = list.filter((i) => {
+        const c = i.protected ? (vault.plain[i.id] ?? '') : i.content;
+        return (
           i.title.toLowerCase().includes(q) ||
-          stripForSearch(i.content).toLowerCase().includes(q) ||
+          stripForSearch(c).toLowerCase().includes(q) ||
           (i.description || '').toLowerCase().includes(q) ||
           i.tags.some((t) => t.toLowerCase().includes(q))
-      );
+        );
+      });
     }
     return [...list].sort((a, b) => {
       if (a.pinned !== b.pinned) return a.pinned ? -1 : 1;
@@ -269,9 +277,15 @@
             {item}
             {selecting}
             isSelected={selected.includes(item.id)}
-            onedit={() => (editing = item)}
+            onedit={() =>
+              (editing = item.protected
+                ? { ...item, tags: [...item.tags], content: vault.plain[item.id] ?? '' }
+                : item)}
             ondelete={() => (deleting = item)}
-            onview={() => (viewing = item)}
+            onview={() =>
+              (viewing = item.protected
+                ? { ...item, tags: [...item.tags], content: vault.plain[item.id] ?? '' }
+                : item)}
             onselectstart={() => startSelect(item.id)}
             ontoggleselect={() => toggleSelect(item.id)}
           />
@@ -373,6 +387,12 @@
     </div>
   {/if}
 
+  {#if vault.securityPrompt}
+    <SecurityModal
+      mode={vault.securityPrompt}
+      onclose={() => (vault.securityPrompt = null)}
+    />
+  {/if}
   {#if folderEditing}
     <FolderModal
       folder={folderEditing}
