@@ -18,6 +18,7 @@
   let editing = $state(null); // item object (edit) or { type } (new)
   let deleting = $state(null); // item pending delete confirmation
   let viewing = $state(null); // note being viewed full screen
+  let viewAutoEdit = $state(false); // open the viewer straight into edit mode
   let showBackup = $state(false);
 
   // Folders
@@ -187,7 +188,7 @@
           <button
             class="shrink-0 rounded-full border px-3.5 py-1.5 text-[13px] font-medium transition-colors
               {tab === t.id
-              ? 'border-ink bg-ink text-white'
+              ? 'border-ink bg-ink text-paper'
               : 'border-line bg-card text-ink-soft'}"
             onclick={() => (tab = t.id)}
           >
@@ -401,10 +402,26 @@
     />
   {/if}
   {#if viewing}
-    <NoteViewer item={viewing} onclose={() => (viewing = null)} />
+    <NoteViewer
+      item={viewing}
+      autoEdit={viewAutoEdit}
+      onclose={() => {
+        viewing = null;
+        viewAutoEdit = false;
+      }}
+    />
   {/if}
   {#if editing}
-    <EditorModal item={editing} onclose={() => (editing = null)} />
+    <EditorModal
+      item={editing}
+      onclose={() => (editing = null)}
+      onsaved={(saved, wasNew) => {
+        if (wasNew && saved.type === 'note') {
+          viewing = saved;
+          viewAutoEdit = true;
+        }
+      }}
+    />
   {/if}
   {#if deleting}
     <ConfirmModal item={deleting} onclose={() => (deleting = null)} />

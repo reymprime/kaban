@@ -116,6 +116,29 @@
 
   <div class="flex items-center gap-0.5 px-2 py-1.5">
     <button
+      class="flex h-9 w-9 items-center justify-center rounded-lg text-ink active:bg-paper"
+      aria-label="Undo"
+      onpointerdown={pd}
+      onclick={() => exec('undo')}
+    >
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M9 14 4 9l5-5" />
+        <path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11" />
+      </svg>
+    </button>
+    <button
+      class="flex h-9 w-9 items-center justify-center rounded-lg text-ink active:bg-paper"
+      aria-label="Redo"
+      onpointerdown={pd}
+      onclick={() => exec('redo')}
+    >
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="m15 14 5-5-5-5" />
+        <path d="M20 9H9.5a5.5 5.5 0 0 0 0 11H13" />
+      </svg>
+    </button>
+    <span class="h-5 w-px bg-line"></span>
+    <button
       class="flex h-9 w-9 items-center justify-center rounded-lg font-display text-[16px] font-extrabold active:bg-paper {active.bold ? 'bg-teal-soft text-teal' : 'text-ink'}"
       aria-label="Bold"
       aria-pressed={active.bold}

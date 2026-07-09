@@ -1,10 +1,11 @@
 <script>
   import { tick } from 'svelte';
+  import * as db from '../lib/db.js';
   import { copyText, saveItem, toast } from '../lib/store.svelte.js';
   import { isHtml, textToHtml, htmlToText, sanitizeHtml } from '../lib/richtext.js';
   import FormatBar from './FormatBar.svelte';
 
-  let { item, onclose } = $props();
+  let { item, onclose, autoEdit = false } = $props();
 
   let mode = $state('read'); // 'read' | 'edit'
   let focusMode = $state(false); // full-screen writing only
@@ -23,6 +24,37 @@
   let editEl = $state(null);
   let focusEl = $state(null);
 
+  // ---- Draft auto-save (accident insurance) ----
+  const draftKey = () => 'draft:' + current.id;
+  let draftTimer = null;
+
+  function scheduleDraft() {
+    if (mode !== 'edit' || current.protected) return; // never store protected content unencrypted
+    clearTimeout(draftTimer);
+    draftTimer = setTimeout(saveDraft, 800);
+  }
+
+  async function saveDraft() {
+    if (mode !== 'edit' || current.protected) return;
+    try {
+      await db.putMeta({
+        key: draftKey(),
+        title,
+        description,
+        tagsText,
+        htmlBody,
+        savedAt: Date.now(),
+      });
+    } catch {}
+  }
+
+  async function clearDraft() {
+    clearTimeout(draftTimer);
+    try {
+      await db.removeMeta(draftKey());
+    } catch {}
+  }
+
   async function startEdit() {
     if (current.locked) {
       toast('Locked — unlock the card first to edit');
@@ -34,15 +66,40 @@
     htmlBody = isHtml(current.content)
       ? sanitizeHtml(current.content)
       : textToHtml(current.content);
+
+    // Restore an unsaved draft if it's newer than the last save
+    if (!current.protected) {
+      try {
+        const draft = await db.getMeta(draftKey());
+        if (draft && draft.savedAt > (current.updatedAt || 0)) {
+          title = draft.title ?? title;
+          description = draft.description ?? description;
+          tagsText = draft.tagsText ?? tagsText;
+          htmlBody = sanitizeHtml(draft.htmlBody ?? htmlBody);
+          toast('Unsaved draft restored');
+        }
+      } catch {}
+    }
+
     mode = 'edit';
     await tick();
     if (editEl) editEl.innerHTML = htmlBody;
   }
 
   function cancelEdit() {
+    clearDraft(); // Cancel is an intentional discard
     mode = 'read';
     focusMode = false;
   }
+
+  // Open straight into Edit Mode for freshly created notes
+  let booted = false;
+  $effect(() => {
+    if (autoEdit && !booted) {
+      booted = true;
+      startEdit();
+    }
+  });
 
   async function enterFocus() {
     focusMode = true;
@@ -80,6 +137,7 @@
     });
     // Keep the readable content locally — saved.content may be encrypted
     current = { ...saved, tags: [...saved.tags], content: sanitizeHtml(htmlBody) };
+    await clearDraft();
     saving = false;
     focusMode = false;
     mode = 'read';
@@ -120,14 +178,14 @@
     <div class="flex rounded-xl border border-line p-0.5">
       <button
         class="rounded-[10px] px-3 py-1 text-[12px] font-semibold transition-colors
-          {mode === 'read' ? 'bg-ink text-white' : 'text-ink-soft'}"
+          {mode === 'read' ? 'bg-ink text-paper' : 'text-ink-soft'}"
         onclick={cancelEdit}
       >
         Read Mode
       </button>
       <button
         class="rounded-[10px] px-3 py-1 text-[12px] font-semibold transition-colors
-          {mode === 'edit' ? 'bg-ink text-white' : 'text-ink-soft'}"
+          {mode === 'edit' ? 'bg-ink text-paper' : 'text-ink-soft'}"
         onclick={startEdit}
       >
         Edit Mode
@@ -210,6 +268,7 @@
         id="nv-title"
         type="text"
         bind:value={title}
+        oninput={scheduleDraft}
         class="mb-3 w-full rounded-xl border border-line bg-paper px-3.5 py-2.5 font-display text-[16px] font-semibold focus:border-teal focus:outline-none"
       />
 
@@ -220,6 +279,7 @@
         id="nv-desc"
         type="text"
         bind:value={description}
+        oninput={scheduleDraft}
         placeholder="Purpose of this note"
         class="mb-3 w-full rounded-xl border border-line bg-paper px-3.5 py-2.5 text-[14px] focus:border-teal focus:outline-none"
       />
@@ -255,7 +315,7 @@
         role="textbox"
         aria-multiline="true"
         aria-label="Note content"
-        oninput={() => (htmlBody = editEl.innerHTML)}
+        oninput={() => { htmlBody = editEl.innerHTML; scheduleDraft(); }}
         class="rich-editor mb-3 min-h-[38dvh] w-full flex-1 rounded-xl border border-line bg-paper px-3.5 py-2.5 text-[15px] leading-relaxed focus:border-teal focus:outline-none"
       ></div>
 
@@ -266,6 +326,7 @@
         id="nv-tags"
         type="text"
         bind:value={tagsText}
+        oninput={scheduleDraft}
         placeholder="ideas, lyrics, todo"
         class="w-full rounded-xl border border-line bg-paper px-3.5 py-2.5 text-[14px] focus:border-teal focus:outline-none"
       />
@@ -337,7 +398,7 @@
         role="textbox"
         aria-multiline="true"
         aria-label="Note content"
-        oninput={() => (htmlBody = focusEl.innerHTML)}
+        oninput={() => { htmlBody = focusEl.innerHTML; scheduleDraft(); }}
         class="rich-editor w-full flex-1 overflow-y-auto bg-card px-5 py-4 text-[16px] leading-relaxed focus:outline-none"
         style="padding-bottom: calc(1rem + env(safe-area-inset-bottom));"
       ></div>

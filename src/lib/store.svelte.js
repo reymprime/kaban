@@ -12,6 +12,8 @@ export const vault = $state({
   security: { configured: false, unlocked: false },
   securityPrompt: null, // null | 'setup' | 'unlock'
   plain: {}, // id -> decrypted content while vault is unlocked (memory only)
+  theme: 'auto', // 'auto' | 'light' | 'dark'
+  isDark: false,
 });
 
 // Session-only. Never persisted. Cleared on lock or app close.
@@ -28,15 +30,33 @@ export function toast(message) {
 
 export async function loadVault() {
   try {
-    const [items, folders, meta] = await Promise.all([
+    const [items, folders, meta, themeMeta] = await Promise.all([
       db.getAll(),
       db.getAllFolders(),
       db.getMeta('security'),
+      db.getMeta('theme'),
     ]);
     vault.items = items;
     vault.folders = folders;
     securityMeta = meta;
     vault.security.configured = !!meta;
+    vault.theme = themeMeta?.value || 'auto';
+    applyTheme();
+
+    // First launch: greet new users with a full guide note
+    if (!items.length) {
+      const onboarded = await db.getMeta('onboarded');
+      if (!onboarded) {
+        await saveItem({
+          type: 'note',
+          title: 'Welcome to Kaban — Start Here',
+          description: 'Your quick guide to the vault',
+          content: WELCOME_HTML,
+          tags: ['guide'],
+        });
+        await db.putMeta({ key: 'onboarded', at: Date.now() });
+      }
+    }
   } catch (e) {
     console.error('Failed to load vault:', e);
     vault.items = [];
@@ -44,6 +64,51 @@ export async function loadVault() {
   }
   vault.loaded = true;
 }
+
+// ---- Theme ----
+
+export function applyTheme() {
+  const pref = vault.theme;
+  const dark =
+    pref === 'dark' ||
+    (pref === 'auto' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+  vault.isDark = dark;
+  document.documentElement.dataset.theme = dark ? 'dark' : 'light';
+  const meta = document.querySelector('meta[name="theme-color"]');
+  if (meta) meta.setAttribute('content', dark ? '#0E1013' : '#F6F7F9');
+}
+
+export async function setTheme(t) {
+  vault.theme = t;
+  applyTheme();
+  try {
+    await db.putMeta({ key: 'theme', value: t });
+  } catch {}
+}
+
+const WELCOME_HTML = [
+  '<b><font size="5">Welcome to Kaban</font></b><br>',
+  'Kaban is your personal vault for AI prompts, links, and notes. Everything is stored on <b>your device only</b> — private, offline, yours.<br><br>',
+  '<b><font color="#7C3AED">■</font> The four categories</b><br>',
+  '<b>Image Prompts</b> and <b>Video Prompts</b> hold your AI prompts. <b>Stored Links</b> saves videos and posts from TikTok, YouTube, Facebook, Instagram, and more — tap <b>Open</b> to jump straight to them. <b>Notes</b> is for anything else.<br><br>',
+  '<b><font color="#0F766E">■</font> Creating cards</b><br>',
+  'Tap the <b>+</b> button, then choose <b>New Card</b> or <b>New Folder</b>. Give cards a title, an optional description (its purpose), and tags for easy searching.<br><br>',
+  '<b><font color="#0F766E">■</font> Card actions</b><br>',
+  '<b>Copy</b> — one tap sends the content to your clipboard.<br>',
+  '<b>Pin</b> — keeps your go-to cards at the top.<br>',
+  '<b>Padlock</b> — locks a card against editing and deleting. Unlock it first to make changes.<br>',
+  '<b>Shield</b> — protects a card with your vault password. Its content is <b>encrypted</b> until you unlock the vault. <u>Warning:</u> there is <b>no password recovery</b>, so choose a password you will never forget.<br><br>',
+  '<b><font color="#D97706">■</font> Notes</b><br>',
+  'Tap a note to read it full screen. Switch to <b>Edit Mode</b> to write, use the <b>formatting bar</b> (bold, colors, highlights, sizes), or tap <b>Focus</b> for distraction-free writing. Your edits <b>auto-save as drafts</b> — even if the app closes accidentally, your writing is safe.<br><br>',
+  '<b><font color="#2563EB">■</font> Folders</b><br>',
+  'Create folders from the <b>+</b> button to organize cards. Deleting a folder never deletes the cards inside.<br><br>',
+  '<b><font color="#2563EB">■</font> Share & Backup</b><br>',
+  '<b>Long-press</b> any card to select multiple cards, then <b>Share</b> them as one JSON file. The receiver imports it via <b>Backup &amp; Restore → Restore from file</b>. Export a full backup regularly from the download icon — it is your insurance.<br><br>',
+  '<b><font color="#0F766E">■</font> Dark mode</b><br>',
+  'Tap the sun/moon icon in the header to switch themes anytime.<br><br>',
+  '<i>You can safely delete this note once you know your way around. Enjoy your vault!</i><br>',
+  '<b>— Gnokz Production</b>',
+].join('');
 
 // ---- Vault password / protection ----
 
@@ -148,12 +213,14 @@ export async function saveItem(data) {
   const now = Date.now();
   const existing = data.id ? vault.items.find((i) => i.id === data.id) : null;
   const isProtected = existing ? !!existing.protected : false;
-  const plainContent = (data.content || '').trim();
+  // content === undefined means "keep the existing content untouched"
+  const contentProvided = data.content !== undefined;
+  const plainContent = contentProvided ? (data.content || '').trim() : '';
   const item = {
     id: data.id || newId(),
     type: data.type,
     title: (data.title || '').trim() || 'Untitled',
-    content: plainContent,
+    content: contentProvided ? plainContent : existing ? existing.content : '',
     description: (data.description || '').trim(),
     tags: [...(data.tags || [])],
     pinned: existing ? !!existing.pinned : false,
@@ -170,12 +237,12 @@ export async function saveItem(data) {
     updatedAt: now,
   };
   // Protected cards are stored encrypted — callers always pass plaintext
-  if (isProtected) {
+  if (isProtected && contentProvided) {
     if (!sessionKey) throw new Error('Vault is locked');
     item.content = await encryptText(sessionKey, plainContent);
   }
   await db.put(item);
-  if (isProtected) vault.plain[item.id] = plainContent;
+  if (isProtected && contentProvided) vault.plain[item.id] = plainContent;
   if (existing) {
     const idx = vault.items.findIndex((i) => i.id === item.id);
     vault.items[idx] = item;

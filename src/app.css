@@ -31,6 +31,29 @@ html {
   overscroll-behavior-y: none;
 }
 
+/* Dark mode — same tokens, darker values. Toggled via data-theme on <html>. */
+[data-theme='dark'] {
+  --color-paper: #0e1013;
+  --color-card: #171a20;
+  --color-ink: #eceef1;
+  --color-ink-soft: #9aa2ae;
+  --color-line: #262b33;
+  --color-teal: #0d9488;
+  --color-teal-soft: #11302d;
+  --color-cat-image: #a78bfa;
+  --color-cat-image-soft: #251d3d;
+  --color-cat-video: #fb7185;
+  --color-cat-video-soft: #3a1c24;
+  --color-cat-link: #60a5fa;
+  --color-cat-link-soft: #17263d;
+  --color-cat-note: #fbbf24;
+  --color-cat-note-soft: #33280f;
+}
+
+body {
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
 body {
   font-family: var(--font-body);
   color: var(--color-ink);

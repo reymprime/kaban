@@ -2,7 +2,7 @@
   import { CATEGORIES } from '../lib/categories.js';
   import { vault, saveItem, toast } from '../lib/store.svelte.js';
 
-  let { item, onclose } = $props();
+  let { item, onclose, onsaved } = $props();
 
   const isNew = !item.id;
   let type = $state(item.type || 'image');
@@ -21,7 +21,8 @@
   );
 
   async function save() {
-    if (!content.trim()) {
+    const isNote = type === 'note';
+    if (!isNote && !content.trim()) {
       toast(isLink ? 'Paste a link first' : 'Content cannot be empty');
       return;
     }
@@ -32,17 +33,19 @@
       .filter(Boolean);
     const validFolder =
       folderId && folderOptions.some((f) => f.id === folderId) ? folderId : null;
-    await saveItem({
+    const saved = await saveItem({
       id: item.id,
       type,
       title,
       description,
-      content,
+      // Notes are written in the full-screen editor; keep existing content here
+      content: isNote ? undefined : content,
       tags,
       folderId: validFolder,
     });
     saving = false;
     toast(isNew ? 'Saved to your kaban ✓' : 'Changes saved ✓');
+    onsaved?.(saved, isNew);
     onclose();
   }
 
@@ -115,27 +118,36 @@
         class="mb-4 w-full rounded-xl border border-line bg-paper px-3.5 py-2.5 text-[14px] focus:border-teal focus:outline-none"
       />
 
-      <label class="mb-1 block text-[12px] font-semibold text-ink-soft" for="kb-content">
-        {isLink ? 'Link URL' : type === 'note' ? 'Note' : 'Prompt'}
-      </label>
-      {#if isLink}
-        <input
-          id="kb-content"
-          type="url"
-          bind:value={content}
-          placeholder="https://…"
-          class="mb-4 w-full rounded-xl border border-line bg-paper px-3.5 py-2.5 font-mono text-[13px] focus:border-teal focus:outline-none"
-        />
+      {#if type === 'note'}
+        <div class="mb-4 flex items-center gap-2 rounded-xl bg-paper px-3.5 py-2.5">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--color-cat-note)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="shrink-0">
+            <path d="M17 3a2.8 2.8 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3Z" />
+          </svg>
+          <p class="text-[12px] text-ink-soft">
+            You'll write the note in the full-screen editor after saving.
+          </p>
+        </div>
       {:else}
-        <textarea
-          id="kb-content"
-          bind:value={content}
-          rows="6"
-          placeholder={type === 'note'
-            ? 'Write anything…'
-            : 'Paste or write your prompt here…'}
-          class="mb-4 w-full resize-y rounded-xl border border-line bg-paper px-3.5 py-2.5 text-[13px] leading-relaxed focus:border-teal focus:outline-none {type === 'note' ? '' : 'font-mono'}"
-        ></textarea>
+        <label class="mb-1 block text-[12px] font-semibold text-ink-soft" for="kb-content">
+          {isLink ? 'Link URL' : 'Prompt'}
+        </label>
+        {#if isLink}
+          <input
+            id="kb-content"
+            type="url"
+            bind:value={content}
+            placeholder="https://…"
+            class="mb-4 w-full rounded-xl border border-line bg-paper px-3.5 py-2.5 font-mono text-[13px] focus:border-teal focus:outline-none"
+          />
+        {:else}
+          <textarea
+            id="kb-content"
+            bind:value={content}
+            rows="6"
+            placeholder="Paste or write your prompt here…"
+            class="mb-4 w-full resize-y rounded-xl border border-line bg-paper px-3.5 py-2.5 font-mono text-[13px] leading-relaxed focus:border-teal focus:outline-none"
+          ></textarea>
+        {/if}
       {/if}
 
       {#if folderOptions.length}

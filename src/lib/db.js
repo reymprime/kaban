@@ -92,8 +92,9 @@ export const putFolder = (folder) => reqPut(FOLDERS, folder);
 export const removeFolder = (id) => reqRemove(FOLDERS, id);
 export const bulkPutFolders = (folders) => reqBulkPut(FOLDERS, folders);
 
-// Meta (security settings, etc.)
+// Meta (security settings, theme, drafts, etc.)
 export const putMeta = (obj) => reqPut(META, obj);
+export const removeMeta = (key) => reqRemove(META, key);
 export const getMeta = (key) =>
   openDB().then(
     (db) =>

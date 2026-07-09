@@ -1,7 +1,7 @@
 <script>
   let { onclose } = $props();
 
-  const version = 'v1.9.1';
+  const version = 'v2.0';
 
   function onBackdrop(e) {
     if (e.target === e.currentTarget) onclose();
@@ -38,24 +38,25 @@
       <p class="mb-0.5 text-[11px] font-semibold uppercase tracking-widest text-ink-soft">
         Created by
       </p>
-      <p class="font-display text-lg font-bold">Reymark Delagao</p>
-      <p class="mb-4 text-[13px] text-ink-soft">GNOKZ Production</p>
+      <p class="mb-4 font-display text-lg font-bold">Gnokz Production</p>
 
       <p class="mb-4 text-[12px] leading-relaxed text-ink-soft">
-        Built with Svelte, crafted entirely on Android. 
+        Built with Svelte, crafted entirely on Android.
         Your prompts stay on your device — private, offline, yours.
       </p>
 
       <a
         class="mb-2 flex items-center justify-center gap-2 rounded-xl border border-line py-2.5 text-[13px] font-semibold text-ink active:bg-paper"
-        href="https://github.com/reymprime"
+        href="https://www.instagram.com/gnokz.production"
         target="_blank"
         rel="noopener noreferrer"
       >
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor">
-          <path d="M12 2A10 10 0 0 0 2 12c0 4.42 2.87 8.17 6.84 9.5.5.09.66-.22.66-.48v-1.7c-2.78.6-3.37-1.34-3.37-1.34-.45-1.16-1.11-1.47-1.11-1.47-.91-.62.07-.6.07-.6 1 .07 1.53 1.03 1.53 1.03.9 1.53 2.34 1.09 2.91.83.09-.65.35-1.09.63-1.34-2.22-.25-4.55-1.11-4.55-4.94 0-1.09.39-1.98 1.03-2.68-.1-.25-.45-1.27.1-2.65 0 0 .84-.27 2.75 1.03a9.56 9.56 0 0 1 5 0c1.91-1.3 2.75-1.03 2.75-1.03.55 1.38.2 2.4.1 2.65.64.7 1.03 1.59 1.03 2.68 0 3.84-2.34 4.69-4.57 4.94.36.31.68.92.68 1.85v2.74c0 .27.16.58.67.48A10 10 0 0 0 22 12 10 10 0 0 0 12 2Z" />
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="2" y="2" width="20" height="20" rx="5" />
+          <circle cx="12" cy="12" r="4.5" />
+          <circle cx="17.5" cy="6.5" r="1" fill="currentColor" stroke="none" />
         </svg>
-        @reymprime
+        @gnokz.production
       </a>
       <a
         class="mb-2 flex items-center justify-center gap-2 rounded-xl border border-line py-2.5 text-[13px] font-semibold text-ink active:bg-paper"
