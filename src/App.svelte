@@ -68,7 +68,16 @@
     if (res.status !== 'cancelled') cancelSelect();
   }
 
-  onMount(loadVault);
+  onMount(async () => {
+    await loadVault();
+    // Handle app shortcut launches (long-press app icon -> quick actions)
+    const params = new URLSearchParams(location.search);
+    const t = params.get('new');
+    if (t && ['image', 'video', 'link', 'note'].includes(t)) {
+      editing = { type: t };
+      history.replaceState(null, '', location.pathname);
+    }
+  });
 
   // Keep the open folder header fresh after renames
   $effect(() => {

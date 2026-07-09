@@ -1,6 +1,6 @@
 // Kaban service worker — network-first with offline cache fallback.
 // Bump CACHE version when you want to force a full refresh.
-const CACHE = 'kaban-v12';
+const CACHE = 'kaban-v13';
 
 self.addEventListener('install', () => {
   self.skipWaiting();
