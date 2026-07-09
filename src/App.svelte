@@ -308,6 +308,21 @@
           class="pop-in flex items-center gap-2 rounded-2xl border border-line bg-card py-3 pl-4 pr-5 text-[14px] font-semibold shadow-lg active:bg-paper"
           onclick={() => {
             showFabMenu = false;
+            selecting = true;
+            selected = [];
+          }}
+        >
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--color-teal)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M9 11.5 11 13.5 15 9.5" />
+            <rect x="3" y="5" width="14" height="14" rx="3" />
+            <path d="M21 8v9a4 4 0 0 1-4 4h-9" />
+          </svg>
+          Select to Share
+        </button>
+        <button
+          class="pop-in flex items-center gap-2 rounded-2xl border border-line bg-card py-3 pl-4 pr-5 text-[14px] font-semibold shadow-lg active:bg-paper"
+          onclick={() => {
+            showFabMenu = false;
             folderEditing = {};
           }}
         >

@@ -15,14 +15,40 @@
     ontoggleselect,
   } = $props();
 
-  // Long-press detection (500ms) to enter selection mode
+  // Long-press detection (500ms) to enter selection mode.
+  // Uses a movement threshold — fingers naturally jitter a few pixels,
+  // so only real movement (scrolling) cancels the press.
   let pressTimer = null;
-  function pressStart() {
+  let startX = 0;
+  let startY = 0;
+  let longPressFired = false;
+
+  function pressStart(e) {
     if (selecting) return;
-    pressTimer = setTimeout(() => onselectstart?.(), 500);
+    startX = e.clientX;
+    startY = e.clientY;
+    longPressFired = false;
+    pressTimer = setTimeout(() => {
+      longPressFired = true;
+      onselectstart?.();
+    }, 500);
+  }
+  function pressMove(e) {
+    if (Math.abs(e.clientX - startX) > 10 || Math.abs(e.clientY - startY) > 10) {
+      clearTimeout(pressTimer);
+    }
   }
   function pressCancel() {
     clearTimeout(pressTimer);
+  }
+  // Swallow the click that fires on finger release after a long-press,
+  // so it doesn't immediately toggle the fresh selection off
+  function swallowClick(e) {
+    if (longPressFired) {
+      e.stopPropagation();
+      e.preventDefault();
+      longPressFired = false;
+    }
   }
 
   const cat = $derived(CATEGORIES[item.type]);
@@ -97,8 +123,10 @@
   style="border-left: 4px solid {isSelected ? 'var(--color-teal)' : cat.color};"
   onpointerdown={pressStart}
   onpointerup={pressCancel}
-  onpointermove={pressCancel}
+  onpointermove={pressMove}
   onpointerleave={pressCancel}
+  onpointercancel={pressCancel}
+  onclickcapture={swallowClick}
   oncontextmenu={(e) => e.preventDefault()}
 >
   {#if selecting}
