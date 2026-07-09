@@ -1,21 +1,4 @@
-# Kaban deploy — PRIVATE SOURCE setup
-#
-# How it works:
-#   - This repo (kaban-src) is PRIVATE. Your Svelte source code stays hidden.
-#   - On every push, this workflow builds the app and pushes ONLY the compiled
-#     `dist` files (minified, unreadable) to the PUBLIC repo `kaban`.
-#   - GitHub Pages serves the public repo, so the URL stays:
-#     https://reymprime.github.io/kaban/
-#
-# One-time setup (see chat instructions):
-#   1. Rename this repo to `kaban-src` and make it Private
-#   2. Create a fresh PUBLIC repo named `kaban` (can be empty)
-#   3. Create a fine-grained Personal Access Token with Contents: Read/Write
-#      on the `kaban` repo, then add it here as a secret named DEPLOY_TOKEN
-#   4. In the public `kaban` repo: Settings -> Pages -> Source: Deploy from a
-#      branch -> Branch: gh-pages / (root)
-
-name: Build & Deploy to public repo
+name: Deploy to GitHub Pages
 
 on:
   push:
@@ -24,16 +7,18 @@ on:
 
 permissions:
   contents: read
+  pages: write
+  id-token: write
 
 concurrency:
   group: pages
   cancel-in-progress: true
 
 jobs:
-  build-deploy:
+  build:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout private source
+      - name: Checkout
         uses: actions/checkout@v4
 
       - name: Setup Node
@@ -47,11 +32,21 @@ jobs:
       - name: Build
         run: npm run build
 
-      - name: Publish dist to public kaban repo
-        uses: peaceiris/actions-gh-pages@v4
+      - name: Setup Pages
+        uses: actions/configure-pages@v4
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
         with:
-          personal_token: ${{ secrets.DEPLOY_TOKEN }}
-          external_repository: reymprime/kaban
-          publish_branch: gh-pages
-          publish_dir: ./dist
-          commit_message: 'Deploy Kaban build'
+          path: dist
+
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
