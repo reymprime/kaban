@@ -104,14 +104,13 @@
         style="border-color: var(--color-cat-video); background: var(--color-cat-video-soft);"
       >
         <p class="text-[13px] font-bold" style="color: var(--color-cat-video);">
-          ⚠ WALANG PASSWORD RECOVERY
+          ⚠ NO PASSWORD RECOVERY
         </p>
         <p class="mt-1 text-[12px] leading-relaxed text-ink-soft">
-          Kapag nakalimutan mo ang password na ito, ang laman ng lahat ng
-          protected cards ay <span class="font-bold text-ink">hindi na mababasa
-          kailanman</span>. Walang reset, walang "forgot password", walang
-          makakatulong — kahit ang developer. Pumili ng password na hinding-hindi
-          mo makakalimutan.
+          If you forget this password, the content of all protected cards
+          becomes <span class="font-bold text-ink">unreadable forever</span>.
+          There is no reset, no "forgot password", and no one can help — not
+          even the developer. Choose a password you will never forget.
         </p>
       </div>
     {:else}
@@ -168,9 +167,9 @@
       <label class="mb-3 flex items-start gap-2 text-[12px] text-ink-soft">
         <input type="checkbox" bind:checked={acknowledged} class="mt-0.5 accent-[#0F766E]" />
         <span>
-          Naiintindihan ko na <span class="font-semibold text-ink">walang paraan
-          para ma-recover ang password</span> at mawawala ang protected content
-          kapag nakalimutan ko ito.
+          I understand that <span class="font-semibold text-ink">the password
+          cannot be recovered</span> and protected content will be lost forever
+          if I forget it.
         </span>
       </label>
     {/if}
