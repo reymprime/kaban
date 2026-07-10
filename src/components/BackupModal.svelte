@@ -87,7 +87,7 @@
       </button>
       <input
         type="file"
-        accept="application/json,.json"
+        accept="application/json,.json,.txt,text/plain"
         class="hidden"
         bind:this={fileInput}
         onchange={handleImport}

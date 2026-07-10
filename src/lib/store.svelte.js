@@ -385,26 +385,41 @@ export async function shareItems(ids) {
   };
   const json = JSON.stringify(payload, null, 2);
   const stamp = new Date().toISOString().slice(0, 10);
-  const filename = `kaban-share-${stamp}.json`;
-  const file = new File([json], filename, { type: 'application/json' });
+  const shareMeta = {
+    title: 'Kaban cards',
+    text: `${items.length} card${items.length === 1 ? '' : 's'} from my Kaban vault`,
+  };
 
-  if (navigator.canShare && navigator.canShare({ files: [file] })) {
-    try {
-      await navigator.share({
-        files: [file],
-        title: 'Kaban cards',
-        text: `${items.length} card${items.length === 1 ? '' : 's'} from my Kaban vault`,
-      });
-      return { status: 'shared', skipped };
-    } catch (e) {
-      if (e.name === 'AbortError') return { status: 'cancelled', skipped };
-      // fall through to download
+  async function tryShare(file) {
+    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+      try {
+        await navigator.share({ files: [file], ...shareMeta });
+        return 'shared';
+      } catch (e) {
+        if (e.name === 'AbortError') return 'cancelled';
+      }
     }
+    return null;
   }
+
+  // 1) Try sharing as .json
+  let result = await tryShare(
+    new File([json], `kaban-share-${stamp}.json`, { type: 'application/json' })
+  );
+  // 2) Chrome's share allowlist often rejects JSON — retry as .txt
+  //    (same JSON content inside; Restore reads it just fine)
+  if (result === null) {
+    result = await tryShare(
+      new File([json], `kaban-share-${stamp}.txt`, { type: 'text/plain' })
+    );
+  }
+  if (result) return { status: result, skipped };
+
+  // 3) Last resort: download the .json file
   const url = URL.createObjectURL(new Blob([json], { type: 'application/json' }));
   const a = document.createElement('a');
   a.href = url;
-  a.download = filename;
+  a.download = `kaban-share-${stamp}.json`;
   a.click();
   URL.revokeObjectURL(url);
   return { status: 'downloaded', skipped };
