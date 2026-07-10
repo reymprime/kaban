@@ -349,9 +349,8 @@ export function exportBackup() {
   });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
-  const stamp = new Date().toISOString().slice(0, 10);
   a.href = url;
-  a.download = `kaban-backup-${stamp}.json`;
+  a.download = 'Kaban-Backup.json';
   a.click();
   URL.revokeObjectURL(url);
 }
@@ -384,41 +383,13 @@ export async function shareItems(ids) {
     items,
   };
   const json = JSON.stringify(payload, null, 2);
-  const stamp = new Date().toISOString().slice(0, 10);
-  const shareMeta = {
-    title: 'Kaban cards',
-    text: `${items.length} card${items.length === 1 ? '' : 's'} from my Kaban vault`,
-  };
 
-  // IMPORTANT: Android gives us ONE share attempt per tap (transient
-  // activation). Probe with canShare (which doesn't consume the gesture),
-  // then call navigator.share exactly once with the best candidate.
-  if (navigator.share) {
-    const candidates = [
-      // .txt first — universally accepted by Chrome's share allowlist
-      new File([json], `kaban-share-${stamp}.txt`, { type: 'text/plain' }),
-      new File([json], `kaban-share-${stamp}.json`, { type: 'application/json' }),
-    ];
-    let file = null;
-    if (navigator.canShare) {
-      file = candidates.find((f) => navigator.canShare({ files: [f] })) || null;
-    }
-    // canShare can be missing or overly pessimistic — still attempt once with .txt
-    if (!file) file = candidates[0];
-    try {
-      await navigator.share({ files: [file], ...shareMeta });
-      return { status: 'shared', skipped };
-    } catch (e) {
-      if (e.name === 'AbortError') return { status: 'cancelled', skipped };
-      // Any other error -> fall through to download
-    }
-  }
-
-  // Last resort: download the .json file
+  // Simple & reliable: download the file, then the user sends it
+  // through any messaging app they like.
   const url = URL.createObjectURL(new Blob([json], { type: 'application/json' }));
   const a = document.createElement('a');
   a.href = url;
-  a.download = `kaban-share-${stamp}.json`;
+  a.download = 'Kaban-Share.json';
   a.click();
   URL.revokeObjectURL(url);
   return { status: 'downloaded', skipped };

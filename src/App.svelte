@@ -1,6 +1,6 @@
 <script>
   import { onMount } from 'svelte';
-  import { vault, loadVault, shareItems, importFromText, toast } from './lib/store.svelte.js';
+  import { vault, loadVault, shareItems, toast } from './lib/store.svelte.js';
   import { TABS, CATEGORIES } from './lib/categories.js';
   import { stripForSearch } from './lib/richtext.js';
   import Header from './components/Header.svelte';
@@ -70,28 +70,12 @@
 
   onMount(async () => {
     await loadVault();
-    const params = new URLSearchParams(location.search);
     // Handle app shortcut launches (long-press app icon -> quick actions)
+    const params = new URLSearchParams(location.search);
     const t = params.get('new');
     if (t && ['image', 'video', 'link', 'note'].includes(t)) {
       editing = { type: t };
       history.replaceState(null, '', location.pathname);
-    }
-    // Handle files shared TO Kaban from other apps (Web Share Target)
-    if (params.get('share-received')) {
-      history.replaceState(null, '', location.pathname);
-      try {
-        const cache = await caches.open('kaban-share-inbox');
-        const res = await cache.match('shared-file');
-        if (res) {
-          const text = await res.text();
-          await cache.delete('shared-file');
-          const { added, updated } = await importFromText(text);
-          toast(`Received: ${added} added, ${updated} updated ✓`);
-        }
-      } catch (e) {
-        toast(e.message || 'Could not read the shared file');
-      }
     }
   });
 
