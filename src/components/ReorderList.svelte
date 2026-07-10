@@ -12,26 +12,21 @@
   let saving = $state(false);
   let startPointerY = 0;
   let startRowY = 0;
+  let lastClientY = 0;
+  let scrollRaf = null;
+
+  // Auto-scroll when dragging near the screen edges (like native apps)
+  const EDGE = 90; // px zone at top/bottom that triggers scrolling
+  const MAX_SPEED = 14; // px per frame at the very edge
 
   function preview(item) {
     const t = item.type === 'note' ? htmlToText(item.content) : item.content;
     return item.protected ? 'Protected content' : t;
   }
 
-  function down(e, idx) {
-    e.preventDefault();
-    dragIdx = idx;
-    startPointerY = e.clientY;
-    startRowY = idx * ROW;
-    dragY = startRowY;
-    window.addEventListener('pointermove', move);
-    window.addEventListener('pointerup', up, { once: true });
-    window.addEventListener('pointercancel', up, { once: true });
-  }
-
-  function move(e) {
+  function applyDrag() {
     const max = (list.length - 1) * ROW;
-    dragY = Math.min(max, Math.max(0, startRowY + (e.clientY - startPointerY)));
+    dragY = Math.min(max, Math.max(0, startRowY + (lastClientY - startPointerY)));
     const target = Math.round(dragY / ROW);
     if (target !== dragIdx) {
       const [it] = list.splice(dragIdx, 1);
@@ -40,9 +35,56 @@
     }
   }
 
+  function autoScroll() {
+    if (dragIdx === -1) {
+      scrollRaf = null;
+      return;
+    }
+    const vh = window.innerHeight;
+    let dy = 0;
+    if (lastClientY < EDGE) {
+      dy = -MAX_SPEED * ((EDGE - lastClientY) / EDGE);
+    } else if (lastClientY > vh - EDGE) {
+      dy = MAX_SPEED * ((lastClientY - (vh - EDGE)) / EDGE);
+    }
+    if (dy) {
+      const before = window.scrollY;
+      window.scrollBy(0, dy);
+      const moved = window.scrollY - before;
+      if (moved) {
+        // Page moved under the finger — keep the dragged card following it
+        startPointerY -= moved;
+        applyDrag();
+      }
+    }
+    scrollRaf = requestAnimationFrame(autoScroll);
+  }
+
+  function down(e, idx) {
+    e.preventDefault();
+    dragIdx = idx;
+    startPointerY = e.clientY;
+    lastClientY = e.clientY;
+    startRowY = idx * ROW;
+    dragY = startRowY;
+    window.addEventListener('pointermove', move);
+    window.addEventListener('pointerup', up, { once: true });
+    window.addEventListener('pointercancel', up, { once: true });
+    if (!scrollRaf) scrollRaf = requestAnimationFrame(autoScroll);
+  }
+
+  function move(e) {
+    lastClientY = e.clientY;
+    applyDrag();
+  }
+
   function up() {
     window.removeEventListener('pointermove', move);
     dragIdx = -1;
+    if (scrollRaf) {
+      cancelAnimationFrame(scrollRaf);
+      scrollRaf = null;
+    }
   }
 
   async function save() {
