@@ -1,6 +1,6 @@
 <script>
   import { onMount } from 'svelte';
-  import { vault, loadVault, shareItems, toast } from './lib/store.svelte.js';
+  import { vault, loadVault, shareItems, tapFeedback, toast } from './lib/store.svelte.js';
   import { TABS, CATEGORIES } from './lib/categories.js';
   import { stripForSearch } from './lib/richtext.js';
   import Header from './components/Header.svelte';
@@ -11,6 +11,7 @@
   import NoteViewer from './components/NoteViewer.svelte';
   import FolderModal from './components/FolderModal.svelte';
   import SecurityModal from './components/SecurityModal.svelte';
+  import SettingsModal from './components/SettingsModal.svelte';
   import Toast from './components/Toast.svelte';
 
   let tab = $state('all');
@@ -20,6 +21,7 @@
   let viewing = $state(null); // note being viewed full screen
   let viewAutoEdit = $state(false); // open the viewer straight into edit mode
   let showBackup = $state(false);
+  let showSettings = $state(false);
 
   // Folders
   let showFabMenu = $state(false);
@@ -69,6 +71,14 @@
   }
 
   onMount(async () => {
+    // Tap feedback (haptics + click sound) for every button and link app-wide
+    document.addEventListener(
+      'pointerdown',
+      (e) => {
+        if (e.target.closest('button, a, [role="button"]')) tapFeedback();
+      },
+      { passive: true }
+    );
     await loadVault();
     // Handle app shortcut launches (long-press app icon -> quick actions)
     const params = new URLSearchParams(location.search);
@@ -92,8 +102,11 @@
     let list = vault.items;
     if (openFolder) {
       list = list.filter((i) => i.folderId === openFolder.id);
-    } else if (tab !== 'all') {
-      list = list.filter((i) => i.type === tab);
+    } else {
+      // Cards inside folders live ONLY inside their folder while browsing.
+      // Search stays global so nothing ever feels lost.
+      if (!q) list = list.filter((i) => !i.folderId);
+      if (tab !== 'all') list = list.filter((i) => i.type === tab);
     }
     if (q) {
       list = list.filter((i) => {
@@ -153,7 +166,11 @@
 
 <div class="mx-auto flex min-h-dvh max-w-lg flex-col">
   <div class="sticky top-0 z-20 border-b border-line/60 bg-paper">
-    <Header bind:query onbackup={() => (showBackup = true)} />
+    <Header
+      bind:query
+      onbackup={() => (showBackup = true)}
+      onsettings={() => (showSettings = true)}
+    />
 
     <!-- Category tabs / folder header -->
     {#if openFolder}
@@ -412,6 +429,9 @@
     </div>
   {/if}
 
+  {#if showSettings}
+    <SettingsModal onclose={() => (showSettings = false)} />
+  {/if}
   {#if vault.securityPrompt}
     <SecurityModal
       mode={vault.securityPrompt}

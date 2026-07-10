@@ -1,6 +1,6 @@
 <script>
   import { CATEGORIES } from '../lib/categories.js';
-  import { saveFolder, deleteFolder, toast } from '../lib/store.svelte.js';
+  import { vault, saveFolder, deleteFolder, toast } from '../lib/store.svelte.js';
 
   let { folder, onclose, ondeleted } = $props();
 
@@ -9,6 +9,10 @@
   let category = $state(folder.category || '');
   let saving = $state(false);
   let confirmingDelete = $state(false);
+
+  const memberCount = $derived(
+    folder.id ? vault.items.filter((i) => i.folderId === folder.id).length : 0
+  );
 
   const options = [
     { id: 'image', label: 'Image Prompts', color: 'var(--color-cat-image)', soft: 'var(--color-cat-image-soft)' },
@@ -36,11 +40,21 @@
 
   async function handleDelete() {
     saving = true;
-    await deleteFolder(folder.id);
-    saving = false;
-    toast('Folder deleted — cards kept safe');
-    ondeleted?.();
-    onclose();
+    try {
+      const n = await deleteFolder(folder.id);
+      toast(
+        n
+          ? `Folder and ${n} card${n === 1 ? '' : 's'} permanently deleted`
+          : 'Folder deleted'
+      );
+      ondeleted?.();
+      onclose();
+    } catch (e) {
+      toast(e.message || 'Could not delete folder');
+      confirmingDelete = false;
+    } finally {
+      saving = false;
+    }
   }
 
   function onBackdrop(e) {
@@ -132,15 +146,21 @@
         </button>
       </div>
     {:else}
-      <div class="rounded-xl border border-line bg-paper p-3">
-        <p class="mb-2 text-[13px] text-ink-soft">
-          Delete “<span class="font-semibold text-ink">{folder.name}</span>”?
-          Cards inside will <span class="font-semibold text-ink">NOT</span> be deleted —
-          they just leave the folder.
+      <div
+        class="rounded-xl border p-3"
+        style="border-color: var(--color-cat-video); background: var(--color-cat-video-soft);"
+      >
+        <p class="mb-1 text-[13px] font-bold" style="color: var(--color-cat-video);">
+          ⚠ Delete “{folder.name}”?
+        </p>
+        <p class="mb-2 text-[13px] leading-relaxed text-ink-soft">
+          This will <span class="font-bold text-ink">permanently delete the folder
+          and ALL {memberCount} card{memberCount === 1 ? '' : 's'} inside it</span>.
+          No restoration. No undo.
         </p>
         <div class="flex gap-2">
           <button
-            class="flex-1 rounded-xl border border-line py-2.5 text-[13px] font-semibold text-ink-soft active:bg-card"
+            class="flex-1 rounded-xl border border-line bg-card py-2.5 text-[13px] font-semibold text-ink-soft active:bg-paper"
             onclick={() => (confirmingDelete = false)}
           >
             Keep it
@@ -151,7 +171,7 @@
             disabled={saving}
             onclick={handleDelete}
           >
-            Delete folder
+            Delete everything
           </button>
         </div>
       </div>

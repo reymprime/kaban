@@ -14,6 +14,7 @@ export const vault = $state({
   plain: {}, // id -> decrypted content while vault is unlocked (memory only)
   theme: 'auto', // 'auto' | 'light' | 'dark'
   isDark: false,
+  settings: { haptic: 'medium', sound: false, volume: 0.5 },
 });
 
 // Session-only. Never persisted. Cleared on lock or app close.
@@ -30,17 +31,19 @@ export function toast(message) {
 
 export async function loadVault() {
   try {
-    const [items, folders, meta, themeMeta] = await Promise.all([
+    const [items, folders, meta, themeMeta, settingsMeta] = await Promise.all([
       db.getAll(),
       db.getAllFolders(),
       db.getMeta('security'),
       db.getMeta('theme'),
+      db.getMeta('settings'),
     ]);
     vault.items = items;
     vault.folders = folders;
     securityMeta = meta;
     vault.security.configured = !!meta;
     vault.theme = themeMeta?.value || 'auto';
+    if (settingsMeta?.value) Object.assign(vault.settings, settingsMeta.value);
     applyTheme();
 
     // First launch: greet new users with a full guide note
@@ -86,6 +89,41 @@ export async function setTheme(t) {
   } catch {}
 }
 
+// ---- Tap feedback (haptics + click sound) ----
+
+const HAPTIC_MS = { off: 0, light: 8, medium: 18, strong: 35 };
+let audioCtx = null;
+
+export async function saveSettings(patch) {
+  Object.assign(vault.settings, patch);
+  try {
+    await db.putMeta({ key: 'settings', value: { ...vault.settings } });
+  } catch {}
+}
+
+export function tapFeedback() {
+  const ms = HAPTIC_MS[vault.settings.haptic] ?? 18;
+  if (ms && navigator.vibrate) navigator.vibrate(ms);
+  if (vault.settings.sound) {
+    try {
+      audioCtx ||= new (window.AudioContext || window.webkitAudioContext)();
+      if (audioCtx.state === 'suspended') audioCtx.resume();
+      const t = audioCtx.currentTime;
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = 'square';
+      osc.frequency.value = 1800;
+      const peak = 0.18 * (vault.settings.volume ?? 0.5) + 0.0001;
+      gain.gain.setValueAtTime(0.0001, t);
+      gain.gain.exponentialRampToValueAtTime(peak, t + 0.003);
+      gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.035);
+      osc.connect(gain).connect(audioCtx.destination);
+      osc.start(t);
+      osc.stop(t + 0.05);
+    } catch {}
+  }
+}
+
 const WELCOME_HTML = [
   '<b><font size="5">Welcome to Kaban</font></b><br>',
   'Kaban is your personal vault for AI prompts, links, and notes. Everything is stored on <b>your device only</b> — private, offline, yours.<br><br>',
@@ -101,7 +139,7 @@ const WELCOME_HTML = [
   '<b><font color="#D97706">■</font> Notes</b><br>',
   'Tap a note to read it full screen. Switch to <b>Edit Mode</b> to write, use the <b>formatting bar</b> (bold, colors, highlights, sizes), or tap <b>Focus</b> for distraction-free writing. Your edits <b>auto-save as drafts</b> — even if the app closes accidentally, your writing is safe.<br><br>',
   '<b><font color="#2563EB">■</font> Folders</b><br>',
-  'Create folders from the <b>+</b> button to organize cards. Deleting a folder never deletes the cards inside.<br><br>',
+  'Create folders from the <b>+</b> button. Cards inside a folder live only in that folder. <u>Careful:</u> deleting a folder <b>permanently deletes every card inside it</b> — no restoration.<br><br>',
   '<b><font color="#2563EB">■</font> Share & Backup</b><br>',
   '<b>Long-press</b> any card to select multiple cards, then <b>Share</b> them as one JSON file. The receiver imports it via <b>Backup &amp; Restore → Restore from file</b>. Export a full backup regularly from the download icon — it is your insurance.<br><br>',
   '<b><font color="#0F766E">■</font> Dark mode</b><br>',
@@ -275,15 +313,19 @@ export async function saveFolder(data) {
 }
 
 export async function deleteFolder(id) {
-  // Cards inside are NOT deleted — they just leave the folder.
-  const members = vault.items.filter((i) => i.folderId === id).map(plain);
-  for (const m of members) m.folderId = null;
-  if (members.length) await db.bulkPut(members);
+  // Cascade delete: the folder AND every card inside are wiped permanently.
+  const members = vault.items.filter((i) => i.folderId === id);
+  if (members.some((m) => m.locked)) {
+    throw new Error('This folder has locked cards — unlock them first to delete');
+  }
+  for (const m of members) {
+    await db.remove(m.id);
+    delete vault.plain[m.id];
+  }
   await db.removeFolder(id);
-  vault.items = vault.items.map((i) =>
-    i.folderId === id ? { ...plain(i), folderId: null } : i
-  );
+  vault.items = vault.items.filter((i) => i.folderId !== id);
   vault.folders = vault.folders.filter((f) => f.id !== id);
+  return members.length;
 }
 
 export async function deleteItem(id) {

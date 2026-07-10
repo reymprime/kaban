@@ -1,7 +1,7 @@
 <script>
   let { onclose } = $props();
 
-  const version = 'v2.4';
+  const version = 'v2.5';
 
   function onBackdrop(e) {
     if (e.target === e.currentTarget) onclose();
@@ -47,16 +47,13 @@
 
       <a
         class="mb-2 flex items-center justify-center gap-2 rounded-xl border border-line py-2.5 text-[13px] font-semibold text-ink active:bg-paper"
-        href="https://www.instagram.com/gnokz.production"
-        target="_blank"
-        rel="noopener noreferrer"
+        href="mailto:gnokzproduction@gmail.com?subject=Kaban%20Bug%20Report"
       >
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <rect x="2" y="2" width="20" height="20" rx="5" />
-          <circle cx="12" cy="12" r="4.5" />
-          <circle cx="17.5" cy="6.5" r="1" fill="currentColor" stroke="none" />
+          <path d="M12 8v5m0 3.5v.5" />
+          <path d="M10.3 3.6 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.6a2 2 0 0 0-3.4 0Z" />
         </svg>
-        @gnokz.production
+        Report Problem
       </a>
       <a
         class="mb-2 flex items-center justify-center gap-2 rounded-xl border border-line py-2.5 text-[13px] font-semibold text-ink active:bg-paper"
