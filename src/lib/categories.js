@@ -31,4 +31,5 @@ export const TABS = [
   { id: 'video', label: 'Video Prompts' },
   { id: 'link', label: 'Stored Links' },
   { id: 'note', label: 'Notes' },
+  { id: 'folder', label: 'Folders' },
 ];

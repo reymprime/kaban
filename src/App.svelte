@@ -102,6 +102,9 @@
     let list = vault.items;
     if (openFolder) {
       list = list.filter((i) => i.folderId === openFolder.id);
+    } else if (tab === 'folder') {
+      // The Folders tab shows folders only — no loose cards
+      return [];
     } else {
       // Cards inside folders live ONLY inside their folder while browsing.
       // Search stays global so nothing ever feels lost.
@@ -126,11 +129,9 @@
   });
 
   const visibleFolders = $derived.by(() => {
-    if (openFolder) return [];
+    // Folders live in their own tab — a dedicated home for all of them
+    if (openFolder || tab !== 'folder') return [];
     let fs = vault.folders;
-    if (tab !== 'all') {
-      fs = fs.filter((f) => f.category === tab || f.category === 'all');
-    }
     const q = query.trim().toLowerCase();
     if (q) fs = fs.filter((f) => f.name.toLowerCase().includes(q));
     return [...fs].sort((a, b) => a.name.localeCompare(b.name));
@@ -148,13 +149,20 @@
     f.category === 'all' ? 'var(--color-teal)' : CATEGORIES[f.category]?.color;
 
   const counts = $derived.by(() => {
-    const c = { all: vault.items.length, image: 0, video: 0, link: 0, note: 0 };
+    const c = {
+      all: vault.items.length,
+      image: 0,
+      video: 0,
+      link: 0,
+      note: 0,
+      folder: vault.folders.length,
+    };
     for (const i of vault.items) c[i.type] = (c[i.type] || 0) + 1;
     return c;
   });
 
   function newItem() {
-    let type = tab === 'all' ? 'image' : tab;
+    let type = tab === 'all' || tab === 'folder' ? 'image' : tab;
     let folderId;
     if (openFolder) {
       if (openFolder.category !== 'all') type = openFolder.category;
@@ -264,7 +272,7 @@
 
     {#if !vault.loaded}
       <p class="py-16 text-center text-sm text-ink-soft">Opening your kaban…</p>
-    {:else if filtered.length === 0}
+    {:else if filtered.length === 0 && !visibleFolders.length}
       <div class="flex flex-col items-center gap-3 py-20 text-center">
         <div
           class="flex h-14 w-14 items-center justify-center rounded-2xl bg-teal-soft"
@@ -278,6 +286,12 @@
         {#if query}
           <p class="text-sm text-ink-soft">
             No results for “{query}”. Try another keyword.
+          </p>
+        {:else if tab === 'folder'}
+          <p class="font-display text-lg font-semibold">No folders yet</p>
+          <p class="max-w-[240px] text-sm text-ink-soft">
+            Tap <span class="font-semibold text-teal">+</span> then
+            <span class="font-semibold">New Folder</span> to create your first one.
           </p>
         {:else if openFolder}
           <p class="font-display text-lg font-semibold">Empty folder</p>
