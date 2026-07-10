@@ -1,7 +1,7 @@
 <script>
   let { onclose } = $props();
 
-  const version = 'v2.7.1';
+  const version = 'v2.7.2';
 
   function onBackdrop(e) {
     if (e.target === e.currentTarget) onclose();

@@ -15,9 +15,18 @@ export function textToHtml(t = '') {
 
 export function htmlToText(h = '') {
   if (!isHtml(h)) return h;
+  // innerText needs a rendered layout to produce line breaks — on a detached
+  // element it collapses everything into one blob. So we convert breaks and
+  // block boundaries to real newlines BEFORE extracting the text.
+  const withBreaks = h
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/<\/(div|p|li|ul|ol|h[1-6])>/gi, '\n')
+    .replace(/<li[^>]*>/gi, '• ');
   const d = document.createElement('div');
-  d.innerHTML = h;
-  return d.innerText || d.textContent || '';
+  d.innerHTML = withBreaks;
+  const text = d.textContent || '';
+  // Tidy up: no trailing spaces before breaks, max one blank line in a row
+  return text.replace(/[ \t]+\n/g, '\n').replace(/\n{3,}/g, '\n\n').trim();
 }
 
 // Cheap tag stripper for search matching (no DOM needed)
