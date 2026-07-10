@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Privacy Policy — Kaban</title>
   <meta name="description" content="Privacy policy for Kaban Prompt Vault by GNOKZ Production." />
   <link rel="icon" type="image/svg+xml" href="./icons/favicon.svg" />
@@ -16,12 +16,17 @@
       --teal: #0f766e;
     }
     * { margin: 0; padding: 0; box-sizing: border-box; }
+    html { overscroll-behavior-y: none; }
     body {
       font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
       background: var(--paper);
       color: var(--ink);
       line-height: 1.65;
       padding: 24px 20px 64px;
+      -webkit-tap-highlight-color: transparent;
+      -webkit-user-select: none;
+      user-select: none;
+      touch-action: pan-x pan-y;
     }
     .wrap { max-width: 560px; margin: 0 auto; }
     .brand {
