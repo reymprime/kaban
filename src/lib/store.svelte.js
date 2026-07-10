@@ -425,7 +425,10 @@ export async function shareItems(ids) {
 }
 
 export async function importBackup(file) {
-  const text = await file.text();
+  return importFromText(await file.text());
+}
+
+export async function importFromText(text) {
   let data;
   try {
     data = JSON.parse(text);
