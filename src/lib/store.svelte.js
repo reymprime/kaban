@@ -390,32 +390,31 @@ export async function shareItems(ids) {
     text: `${items.length} card${items.length === 1 ? '' : 's'} from my Kaban vault`,
   };
 
-  async function tryShare(file) {
-    if (navigator.canShare && navigator.canShare({ files: [file] })) {
-      try {
-        await navigator.share({ files: [file], ...shareMeta });
-        return 'shared';
-      } catch (e) {
-        if (e.name === 'AbortError') return 'cancelled';
-      }
+  // IMPORTANT: Android gives us ONE share attempt per tap (transient
+  // activation). Probe with canShare (which doesn't consume the gesture),
+  // then call navigator.share exactly once with the best candidate.
+  if (navigator.share) {
+    const candidates = [
+      // .txt first — universally accepted by Chrome's share allowlist
+      new File([json], `kaban-share-${stamp}.txt`, { type: 'text/plain' }),
+      new File([json], `kaban-share-${stamp}.json`, { type: 'application/json' }),
+    ];
+    let file = null;
+    if (navigator.canShare) {
+      file = candidates.find((f) => navigator.canShare({ files: [f] })) || null;
     }
-    return null;
+    // canShare can be missing or overly pessimistic — still attempt once with .txt
+    if (!file) file = candidates[0];
+    try {
+      await navigator.share({ files: [file], ...shareMeta });
+      return { status: 'shared', skipped };
+    } catch (e) {
+      if (e.name === 'AbortError') return { status: 'cancelled', skipped };
+      // Any other error -> fall through to download
+    }
   }
 
-  // 1) Try sharing as .json
-  let result = await tryShare(
-    new File([json], `kaban-share-${stamp}.json`, { type: 'application/json' })
-  );
-  // 2) Chrome's share allowlist often rejects JSON — retry as .txt
-  //    (same JSON content inside; Restore reads it just fine)
-  if (result === null) {
-    result = await tryShare(
-      new File([json], `kaban-share-${stamp}.txt`, { type: 'text/plain' })
-    );
-  }
-  if (result) return { status: result, skipped };
-
-  // 3) Last resort: download the .json file
+  // Last resort: download the .json file
   const url = URL.createObjectURL(new Blob([json], { type: 'application/json' }));
   const a = document.createElement('a');
   a.href = url;
