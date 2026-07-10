@@ -15,6 +15,8 @@ export const vault = $state({
   theme: 'auto', // 'auto' | 'light' | 'dark'
   isDark: false,
   settings: { haptic: 'medium', sound: false, volume: 0.5 },
+  stats: { days: {}, lastRecapAt: 0 },
+  recapOpen: false,
 });
 
 // Session-only. Never persisted. Cleared on lock or app close.
@@ -31,20 +33,43 @@ export function toast(message) {
 
 export async function loadVault() {
   try {
-    const [items, folders, meta, themeMeta, settingsMeta] = await Promise.all([
-      db.getAll(),
-      db.getAllFolders(),
-      db.getMeta('security'),
-      db.getMeta('theme'),
-      db.getMeta('settings'),
-    ]);
+    const [items, folders, meta, themeMeta, settingsMeta, statsMeta] =
+      await Promise.all([
+        db.getAll(),
+        db.getAllFolders(),
+        db.getMeta('security'),
+        db.getMeta('theme'),
+        db.getMeta('settings'),
+        db.getMeta('stats'),
+      ]);
     vault.items = items;
     vault.folders = folders;
     securityMeta = meta;
     vault.security.configured = !!meta;
     vault.theme = themeMeta?.value || 'auto';
     if (settingsMeta?.value) Object.assign(vault.settings, settingsMeta.value);
+    if (statsMeta?.value) Object.assign(vault.stats, statsMeta.value);
     applyTheme();
+
+    // ---- Weekly recap bookkeeping ----
+    const WEEK = 7 * 24 * 60 * 60 * 1000;
+    if (!vault.stats.lastRecapAt) {
+      // First run: start the 7-day clock now
+      vault.stats.lastRecapAt = Date.now();
+    }
+    // Mark today as an active day
+    vault.stats.days[dayKey()] ||= { copies: 0, edits: 0 };
+    // Prune day entries older than 35 days
+    const cutoff = Date.now() - 35 * 24 * 60 * 60 * 1000;
+    for (const k of Object.keys(vault.stats.days)) {
+      if (new Date(k + 'T12:00:00').getTime() < cutoff) delete vault.stats.days[k];
+    }
+    // Time for a recap?
+    if (Date.now() - vault.stats.lastRecapAt >= WEEK) {
+      vault.stats.lastRecapAt = Date.now();
+      vault.recapOpen = true;
+    }
+    persistStats();
 
     // First launch: greet new users with a full guide note
     if (!items.length) {
@@ -87,6 +112,30 @@ export async function setTheme(t) {
   try {
     await db.putMeta({ key: 'theme', value: t });
   } catch {}
+}
+
+// ---- Weekly recap stats (local, private, tiny) ----
+
+export function dayKey(d = new Date()) {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+let statsTimer = null;
+function persistStats() {
+  clearTimeout(statsTimer);
+  statsTimer = setTimeout(() => {
+    db.putMeta({
+      key: 'stats',
+      value: JSON.parse(JSON.stringify(vault.stats)),
+    }).catch(() => {});
+  }, 800);
+}
+
+export function bumpStat(kind) {
+  const k = dayKey();
+  const d = (vault.stats.days[k] ||= { copies: 0, edits: 0 });
+  d[kind] = (d[kind] || 0) + 1;
+  persistStats();
 }
 
 // ---- Tap feedback (haptics + click sound) ----
@@ -307,6 +356,7 @@ export async function saveItem(data) {
   if (existing) {
     const idx = vault.items.findIndex((i) => i.id === item.id);
     vault.items[idx] = item;
+    bumpStat('edits');
   } else {
     vault.items.push(item);
   }
@@ -413,6 +463,7 @@ export async function toggleLock(item) {
 export async function copyText(text) {
   try {
     await navigator.clipboard.writeText(text);
+    bumpStat('copies');
     return true;
   } catch {
     // Fallback for older WebViews
@@ -427,6 +478,7 @@ export async function copyText(text) {
       ok = document.execCommand('copy');
     } catch {}
     document.body.removeChild(ta);
+    if (ok) bumpStat('copies');
     return ok;
   }
 }

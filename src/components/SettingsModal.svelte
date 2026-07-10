@@ -129,5 +129,19 @@
     >
       Tap to test
     </button>
+
+    <button
+      class="mt-2 flex w-full items-center justify-center gap-2 rounded-xl bg-teal-soft py-3 text-[14px] font-semibold text-teal active:opacity-80"
+      onclick={() => {
+        onclose();
+        vault.recapOpen = true;
+      }}
+    >
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M3 3v18h18" />
+        <path d="M7 15v-4m5 4V8m5 7v-6" />
+      </svg>
+      View Weekly Recap
+    </button>
   </div>
 </div>

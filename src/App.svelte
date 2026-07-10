@@ -14,6 +14,7 @@
   import SettingsModal from './components/SettingsModal.svelte';
   import ReorderList from './components/ReorderList.svelte';
   import FolderPickerModal from './components/FolderPickerModal.svelte';
+  import RecapModal from './components/RecapModal.svelte';
   import Toast from './components/Toast.svelte';
 
   let tab = $state('all');
@@ -525,6 +526,9 @@
     </div>
   {/if}
 
+  {#if vault.recapOpen}
+    <RecapModal onclose={() => (vault.recapOpen = false)} />
+  {/if}
   {#if showFolderPicker}
     <FolderPickerModal
       types={selectedTypes}
