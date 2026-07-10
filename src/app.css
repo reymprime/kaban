@@ -214,3 +214,31 @@ textarea {
   outline: 2px solid var(--color-teal);
   outline-offset: 2px;
 }
+
+/* Instant press-down reaction on every button — uses the standalone `scale`
+   property so it never conflicts with translate-based positioning */
+button {
+  transition: scale 0.1s ease;
+}
+button:active {
+  scale: 0.95;
+}
+
+/* Reorder rows: real-time slide animation while dragging */
+.reorder-row {
+  transition: transform 0.18s cubic-bezier(0.22, 1, 0.36, 1);
+  will-change: transform;
+}
+.reorder-row.dragging {
+  transition: none;
+  z-index: 10;
+  scale: 1.02;
+  box-shadow: 0 8px 24px rgb(0 0 0 / 0.15);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  button,
+  .reorder-row {
+    transition: none;
+  }
+}

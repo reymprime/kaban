@@ -252,6 +252,7 @@ function plain(i) {
     locked: !!i.locked,
     protected: !!i.protected,
     folderId: i.folderId || null,
+    order: typeof i.order === 'number' ? i.order : null,
     createdAt: i.createdAt,
     updatedAt: i.updatedAt,
   };
@@ -276,7 +277,8 @@ export async function saveItem(data) {
   const plainContent = contentProvided ? (data.content || '').trim() : '';
   const item = {
     id: data.id || newId(),
-    type: data.type,
+    // Card type is permanent — existing cards keep their original type forever
+    type: existing ? existing.type : data.type,
     title: (data.title || '').trim() || 'Untitled',
     content: contentProvided ? plainContent : existing ? existing.content : '',
     description: (data.description || '').trim(),
@@ -284,6 +286,7 @@ export async function saveItem(data) {
     pinned: existing ? !!existing.pinned : false,
     locked: existing ? !!existing.locked : false,
     protected: isProtected,
+    order: existing && typeof existing.order === 'number' ? existing.order : null,
     // Preserve folder when caller (e.g. NoteViewer) doesn't send folderId
     folderId:
       data.folderId !== undefined
@@ -330,6 +333,41 @@ export async function saveFolder(data) {
     vault.folders.push(folder);
   }
   return folder;
+}
+
+// Move cards into a folder (folderId) or kick them back home (null)
+export async function moveToFolder(ids, folderId) {
+  const updates = [];
+  for (const i of vault.items) {
+    if (!ids.includes(i.id)) continue;
+    const p = plain(i);
+    p.folderId = folderId;
+    updates.push(p);
+  }
+  if (updates.length) await db.bulkPut(updates);
+  for (const u of updates) {
+    const idx = vault.items.findIndex((x) => x.id === u.id);
+    vault.items[idx] = u;
+  }
+  return updates.length;
+}
+
+// Persist a manual drag-to-reorder arrangement (0..n within the view)
+export async function reorderItems(orderedIds) {
+  const updates = [];
+  orderedIds.forEach((id, i) => {
+    const it = vault.items.find((x) => x.id === id);
+    if (it) {
+      const p = plain(it);
+      p.order = i;
+      updates.push(p);
+    }
+  });
+  if (updates.length) await db.bulkPut(updates);
+  for (const u of updates) {
+    const idx = vault.items.findIndex((x) => x.id === u.id);
+    vault.items[idx] = u;
+  }
 }
 
 export async function deleteFolder(id) {
@@ -489,6 +527,7 @@ export async function importFromText(text) {
       locked: !!raw.locked,
       protected: !!raw.protected,
       folderId: raw.folderId || null,
+      order: typeof raw.order === 'number' ? raw.order : null,
       createdAt: raw.createdAt || Date.now(),
       updatedAt: raw.updatedAt || Date.now(),
     };

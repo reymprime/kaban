@@ -81,20 +81,34 @@
     </div>
 
     <div class="flex-1 overflow-y-auto px-5 pb-2">
-      <!-- Type chips -->
-      <div class="mb-4 grid grid-cols-2 gap-2">
-        {#each Object.entries(CATEGORIES) as [key, cat] (key)}
-          <button
-            class="rounded-xl border px-3 py-2.5 text-[13px] font-semibold transition-colors"
-            style={type === key
-              ? `border-color: ${cat.color}; background: ${cat.soft}; color: ${cat.color};`
-              : 'border-color: var(--color-line); color: var(--color-ink-soft);'}
-            onclick={() => (type = key)}
+      <!-- Type chips (create only — card type is permanent) -->
+      {#if isNew}
+        <div class="mb-4 grid grid-cols-2 gap-2">
+          {#each Object.entries(CATEGORIES) as [key, cat] (key)}
+            <button
+              class="rounded-xl border px-3 py-2.5 text-[13px] font-semibold transition-colors"
+              style={type === key
+                ? `border-color: ${cat.color}; background: ${cat.soft}; color: ${cat.color};`
+                : 'border-color: var(--color-line); color: var(--color-ink-soft);'}
+              onclick={() => (type = key)}
+            >
+              {cat.label}
+            </button>
+          {/each}
+        </div>
+      {:else}
+        <div class="mb-4 flex items-center gap-2.5 rounded-xl bg-paper px-3.5 py-2.5">
+          <span
+            class="rounded-md px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide"
+            style="background: {CATEGORIES[type].soft}; color: {CATEGORIES[type].color};"
           >
-            {cat.label}
-          </button>
-        {/each}
-      </div>
+            {CATEGORIES[type].label}
+          </span>
+          <p class="text-[12px] text-ink-soft">
+            Card type is permanent and can't be changed.
+          </p>
+        </div>
+      {/if}
 
       <label class="mb-1 block text-[12px] font-semibold text-ink-soft" for="kb-title">
         Title

@@ -118,7 +118,7 @@
 </script>
 
 <li
-  class="relative overflow-hidden rounded-2xl border bg-card transition-shadow
+  class="relative overflow-hidden rounded-2xl border bg-card transition-[scale,box-shadow] duration-100 active:scale-[0.99]
     {isSelected ? 'border-teal shadow-[0_0_0_2px_var(--color-teal)]' : locked ? 'border-ink/15' : 'border-line'}"
   style="border-left: 4px solid {isSelected ? 'var(--color-teal)' : cat.color};"
   onpointerdown={pressStart}

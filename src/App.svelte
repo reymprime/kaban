@@ -1,6 +1,6 @@
 <script>
   import { onMount } from 'svelte';
-  import { vault, loadVault, shareItems, tapFeedback, toast } from './lib/store.svelte.js';
+  import { vault, loadVault, shareItems, moveToFolder, reorderItems, tapFeedback, toast } from './lib/store.svelte.js';
   import { TABS, CATEGORIES } from './lib/categories.js';
   import { stripForSearch } from './lib/richtext.js';
   import Header from './components/Header.svelte';
@@ -12,6 +12,8 @@
   import FolderModal from './components/FolderModal.svelte';
   import SecurityModal from './components/SecurityModal.svelte';
   import SettingsModal from './components/SettingsModal.svelte';
+  import ReorderList from './components/ReorderList.svelte';
+  import FolderPickerModal from './components/FolderPickerModal.svelte';
   import Toast from './components/Toast.svelte';
 
   let tab = $state('all');
@@ -32,6 +34,36 @@
   let selecting = $state(false);
   let selected = $state([]);
   let sharing = $state(false);
+  let showFolderPicker = $state(false);
+  let reordering = $state(false);
+
+  const selectedTypes = $derived(
+    vault.items.filter((i) => selected.includes(i.id)).map((i) => i.type)
+  );
+
+  async function handleKick() {
+    const n = await moveToFolder(selected, null);
+    toast(`${n} card${n === 1 ? '' : 's'} kicked back home`);
+    cancelSelect();
+  }
+
+  async function handleMove(folder) {
+    const n = await moveToFolder(selected, folder.id);
+    toast(`Moved ${n} card${n === 1 ? '' : 's'} to “${folder.name}” ✓`);
+    showFolderPicker = false;
+    cancelSelect();
+  }
+
+  function startReorder() {
+    cancelSelect();
+    reordering = true;
+  }
+
+  async function saveReorder(orderedIds) {
+    await reorderItems(orderedIds);
+    reordering = false;
+    toast('New order saved ✓');
+  }
 
   function startSelect(id) {
     if (selecting) return;
@@ -122,9 +154,12 @@
         );
       });
     }
+    // Pinned first, then manual drag order; cards never manually
+    // ordered fall back to newest-first via a negative timestamp.
+    const ord = (x) => (typeof x.order === 'number' ? x.order : -(x.updatedAt || 0));
     return [...list].sort((a, b) => {
       if (a.pinned !== b.pinned) return a.pinned ? -1 : 1;
-      return (b.updatedAt || 0) - (a.updatedAt || 0);
+      return ord(a) - ord(b);
     });
   });
 
@@ -238,6 +273,13 @@
 
   <!-- Card list -->
   <main class="flex-1 px-4 pb-32 pt-1">
+    {#if reordering}
+      <ReorderList
+        items={filtered}
+        onsave={saveReorder}
+        oncancel={() => (reordering = false)}
+      />
+    {:else}
     {#if visibleFolders.length}
       <ul class="mb-3 flex flex-col gap-2">
         {#each visibleFolders as f (f.id)}
@@ -333,10 +375,13 @@
         {/each}
       </ul>
     {/if}
+    {/if}
   </main>
 
   <!-- FAB + menu -->
-  {#if !selecting}
+  {#if reordering}
+    <!-- Reorder mode has its own Save/Cancel bar -->
+  {:else if !selecting}
     {#if showFabMenu}
       <button
         class="fixed inset-0 z-30 bg-ink/20"
@@ -408,29 +453,66 @@
   {:else}
     <!-- Selection action bar -->
     <div
-      class="pop-in fixed bottom-0 left-1/2 z-30 flex w-full max-w-lg -translate-x-1/2 items-center gap-2 border-t border-line bg-card px-4 py-3"
+      class="pop-in fixed bottom-0 left-1/2 z-30 flex w-full max-w-lg -translate-x-1/2 items-center gap-1.5 border-t border-line bg-card px-3 py-3"
       style="padding-bottom: calc(0.75rem + env(safe-area-inset-bottom));"
     >
       <button
-        class="flex h-10 w-10 items-center justify-center rounded-xl border border-line text-ink-soft active:bg-paper"
+        class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-line text-ink-soft active:bg-paper"
         aria-label="Cancel selection"
         onclick={cancelSelect}
       >
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
           <path d="M18 6 6 18M6 6l12 12" />
         </svg>
       </button>
-      <span class="flex-1 text-[14px] font-semibold">
+      <span class="min-w-0 flex-1 truncate text-[13px] font-semibold">
         {selected.length} selected
       </span>
       <button
-        class="rounded-xl border border-line px-3 py-2.5 text-[13px] font-semibold text-ink-soft active:bg-paper"
+        class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-line text-ink-soft active:bg-paper"
+        aria-label="Select all"
         onclick={selectAllVisible}
       >
-        Select all
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="m3 13 3 3 5-6M12 13l3 3 6-7" />
+        </svg>
       </button>
       <button
-        class="flex items-center gap-1.5 rounded-xl bg-teal px-4 py-2.5 text-[13px] font-semibold text-white active:opacity-90 disabled:opacity-50"
+        class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-line text-ink-soft active:bg-paper"
+        aria-label="Re-Order Cards"
+        onclick={startReorder}
+      >
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+          <path d="M8 6h13M8 12h13M8 18h13M3.5 6h.01M3.5 12h.01M3.5 18h.01" />
+        </svg>
+      </button>
+      {#if openFolder}
+        <button
+          class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-line text-ink-soft active:bg-paper disabled:opacity-40"
+          aria-label="Kick cards out of this folder"
+          disabled={!selected.length}
+          onclick={handleKick}
+        >
+          <!-- Kick: arrow leaving a box -->
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M14 4h4a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-4" />
+            <path d="M10 8 4 12l6 4M4 12h12" />
+          </svg>
+        </button>
+      {/if}
+      <button
+        class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-line text-ink-soft active:bg-paper disabled:opacity-40"
+        aria-label="Move to folder"
+        disabled={!selected.length}
+        onclick={() => (showFolderPicker = true)}
+      >
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M4 5a2 2 0 0 1 2-2h3.6a2 2 0 0 1 1.6.8l1.2 1.6a1 1 0 0 0 .8.4H18a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V5Z" />
+          <path d="M12 10v6m0-6-2.5 2.5M12 10l2.5 2.5" transform="rotate(180 12 13)" />
+        </svg>
+      </button>
+      <button
+        class="flex h-10 shrink-0 items-center gap-1.5 rounded-xl bg-teal px-3.5 text-[13px] font-semibold text-white active:opacity-90 disabled:opacity-50"
         disabled={!selected.length || sharing}
         onclick={handleShare}
       >
@@ -438,11 +520,18 @@
           <circle cx="18" cy="5" r="3" /><circle cx="6" cy="12" r="3" /><circle cx="18" cy="19" r="3" />
           <path d="m8.6 13.5 6.8 4M15.4 6.5l-6.8 4" />
         </svg>
-        {sharing ? 'Sharing…' : 'Share'}
+        {sharing ? '…' : 'Share'}
       </button>
     </div>
   {/if}
 
+  {#if showFolderPicker}
+    <FolderPickerModal
+      types={selectedTypes}
+      onpick={handleMove}
+      onclose={() => (showFolderPicker = false)}
+    />
+  {/if}
   {#if showSettings}
     <SettingsModal onclose={() => (showSettings = false)} />
   {/if}
