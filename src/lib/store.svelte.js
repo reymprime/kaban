@@ -94,6 +94,33 @@ export async function setTheme(t) {
 const HAPTIC_MS = { off: 0, light: 8, medium: 18, strong: 35 };
 let audioCtx = null;
 
+function getAudioCtx() {
+  // Android kills or suspends the audio engine when the app is backgrounded.
+  // Recreate it if it was closed; callers resume it if it was suspended.
+  if (!audioCtx || audioCtx.state === 'closed') {
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  }
+  return audioCtx;
+}
+
+function playTick() {
+  try {
+    const ctx = getAudioCtx();
+    const t = ctx.currentTime;
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = 'square';
+    osc.frequency.value = 1800;
+    const peak = 0.18 * (vault.settings.volume ?? 0.5) + 0.0001;
+    gain.gain.setValueAtTime(0.0001, t);
+    gain.gain.exponentialRampToValueAtTime(peak, t + 0.003);
+    gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.035);
+    osc.connect(gain).connect(ctx.destination);
+    osc.start(t);
+    osc.stop(t + 0.05);
+  } catch {}
+}
+
 export async function saveSettings(patch) {
   Object.assign(vault.settings, patch);
   try {
@@ -106,20 +133,13 @@ export function tapFeedback() {
   if (ms && navigator.vibrate) navigator.vibrate(ms);
   if (vault.settings.sound) {
     try {
-      audioCtx ||= new (window.AudioContext || window.webkitAudioContext)();
-      if (audioCtx.state === 'suspended') audioCtx.resume();
-      const t = audioCtx.currentTime;
-      const osc = audioCtx.createOscillator();
-      const gain = audioCtx.createGain();
-      osc.type = 'square';
-      osc.frequency.value = 1800;
-      const peak = 0.18 * (vault.settings.volume ?? 0.5) + 0.0001;
-      gain.gain.setValueAtTime(0.0001, t);
-      gain.gain.exponentialRampToValueAtTime(peak, t + 0.003);
-      gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.035);
-      osc.connect(gain).connect(audioCtx.destination);
-      osc.start(t);
-      osc.stop(t + 0.05);
+      const ctx = getAudioCtx();
+      if (ctx.state === 'suspended') {
+        // We're inside a user gesture (pointerdown), so resume is allowed
+        ctx.resume().then(playTick).catch(() => {});
+      } else {
+        playTick();
+      }
     } catch {}
   }
 }
