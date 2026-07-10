@@ -343,7 +343,7 @@
         aria-label="Close menu"
         onclick={() => (showFabMenu = false)}
       ></button>
-      <div class="fixed bottom-24 right-5 z-30 flex flex-col items-end gap-2">
+      <div class="fixed bottom-24 right-[max(1.25rem,calc(50%-16rem+1.25rem))] z-30 flex flex-col items-end gap-2">
         <button
           class="pop-in flex items-center gap-2 rounded-2xl border border-line bg-card py-3 pl-4 pr-5 text-[14px] font-semibold shadow-lg active:bg-paper"
           onclick={() => {
@@ -387,7 +387,7 @@
       </div>
     {/if}
     <button
-      class="fixed bottom-6 right-5 z-30 flex h-14 w-14 items-center justify-center rounded-2xl bg-teal text-white shadow-lg shadow-teal/30 transition-transform active:scale-95"
+      class="fixed bottom-6 right-[max(1.25rem,calc(50%-16rem+1.25rem))] z-30 flex h-14 w-14 items-center justify-center rounded-2xl bg-teal text-white shadow-lg shadow-teal/30 transition-transform active:scale-95"
       style="margin-bottom: env(safe-area-inset-bottom);"
       aria-label={showFabMenu ? 'Close menu' : 'Add new'}
       onclick={() => (showFabMenu = !showFabMenu)}
