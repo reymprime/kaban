@@ -1,4 +1,5 @@
 <script>
+  import { lockScroll } from '../lib/scrollLock.js';
   import { vault, setupPassword, unlockVault, changePassword, toast } from '../lib/store.svelte.js';
 
   let { mode, onclose } = $props(); // 'setup' | 'unlock' | 'change'
@@ -93,6 +94,7 @@
 
 <div
   class="fixed inset-0 z-50 flex items-end justify-center bg-ink/40 sm:items-center"
+  use:lockScroll
   onclick={onBackdrop}
   role="presentation"
 >

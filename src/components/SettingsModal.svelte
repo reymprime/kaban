@@ -1,4 +1,5 @@
 <script>
+  import { lockScroll } from '../lib/scrollLock.js';
   import { vault, saveSettings, tapFeedback } from '../lib/store.svelte.js';
 
   let { onclose } = $props();
@@ -31,6 +32,7 @@
 
 <div
   class="fixed inset-0 z-40 flex items-end justify-center bg-ink/40 sm:items-center"
+  use:lockScroll
   onclick={onBackdrop}
   role="presentation"
 >
