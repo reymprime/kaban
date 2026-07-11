@@ -1,57 +1,69 @@
 {
-  "name": "Kaban — Prompt Vault",
-  "short_name": "Kaban",
-  "description": "Your personal vault for AI prompts, links, and notes.",
-  "start_url": "./",
-  "scope": "./",
-  "display": "standalone",
-  "orientation": "any",
-  "background_color": "#F6F7F9",
-  "theme_color": "#F6F7F9",
-  "icons": [
-    {
-      "src": "./icons/icon-192.png",
-      "sizes": "192x192",
-      "type": "image/png",
-      "purpose": "any"
-    },
-    {
-      "src": "./icons/icon-512.png",
-      "sizes": "512x512",
-      "type": "image/png",
-      "purpose": "any"
-    },
-    {
-      "src": "./icons/icon-maskable-512.png",
-      "sizes": "512x512",
-      "type": "image/png",
-      "purpose": "maskable"
-    }
-  ],
-  "shortcuts": [
-    {
-      "name": "New Image Prompt",
-      "short_name": "Image Prompt",
-      "url": "./?new=image",
-      "icons": [{ "src": "./icons/icon-192.png", "sizes": "192x192" }]
-    },
-    {
-      "name": "New Video Prompt",
-      "short_name": "Video Prompt",
-      "url": "./?new=video",
-      "icons": [{ "src": "./icons/icon-192.png", "sizes": "192x192" }]
-    },
-    {
-      "name": "New Note",
-      "short_name": "Note",
-      "url": "./?new=note",
-      "icons": [{ "src": "./icons/icon-192.png", "sizes": "192x192" }]
-    },
-    {
-      "name": "New Stored Link",
-      "short_name": "Link",
-      "url": "./?new=link",
-      "icons": [{ "src": "./icons/icon-192.png", "sizes": "192x192" }]
-    }
-  ]
+"name": "Kaban — Prompt Vault",
+"short_name": "Kaban",
+"description": "Your personal vault for AI prompts, links, and notes.",
+"start_url": "./",
+"scope": "./",
+"display": "standalone",
+"orientation": "any",
+"background_color": "#F6F7F9",
+"theme_color": "#F6F7F9",
+"icons": [
+{
+"src": "./icons/icon-192.png",
+"sizes": "192x192",
+"type": "image/png",
+"purpose": "any"
+},
+{
+"src": "./icons/icon-512.png",
+"sizes": "512x512",
+"type": "image/png",
+"purpose": "any"
+},
+{
+"src": "./icons/icon-maskable-512.png",
+"sizes": "512x512",
+"type": "image/png",
+"purpose": "maskable"
+}
+],
+"shortcuts": [
+{
+"name": "New Image Prompt",
+"short_name": "Image Prompt",
+"url": "./?new=image",
+"icons": [
+{ "src": "./icons/shortcut-image-96.png", "sizes": "96x96", "type": "image/png" },
+{ "src": "./icons/shortcut-image-192.png", "sizes": "192x192", "type": "image/png" }
+]
+},
+{
+"name": "New Video Prompt",
+"short_name": "Video Prompt",
+"url": "./?new=video",
+"icons": [
+{ "src": "./icons/shortcut-video-96.png", "sizes": "96x96", "type": "image/png" },
+{ "src": "./icons/shortcut-video-192.png", "sizes": "192x192", "type": "image/png" }
+]
+},
+{
+"name": "New Note",
+"short_name": "Note",
+"url": "./?new=note",
+"icons": [
+{ "src": "./icons/shortcut-note-96.png", "sizes": "96x96", "type": "image/png" },
+{ "src": "./icons/shortcut-note-192.png", "sizes": "192x192", "type": "image/png" }
+]
+},
+{
+"name": "New Stored Link",
+"short_name": "Link",
+"url": "./?new=link",
+"icons": [
+{ "src": "./icons/shortcut-link-96.png", "sizes": "96x96", "type": "image/png" },
+{ "src": "./icons/shortcut-link-192.png", "sizes": "192x192", "type": "image/png" }
+]
+}
+]
 }
