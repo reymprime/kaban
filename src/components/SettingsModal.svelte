@@ -130,6 +130,36 @@
       Tap to test
     </button>
 
+    {#if vault.security.configured}
+      <button
+        class="mt-2 flex w-full items-center justify-center gap-2 rounded-xl border border-line py-3 text-[14px] font-semibold text-ink active:bg-paper"
+        onclick={() => {
+          onclose();
+          vault.securityPrompt = 'change';
+        }}
+      >
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 2 4 5v6c0 5 3.4 9.4 8 11 4.6-1.6 8-6 8-11V5l-8-3Z" />
+          <path d="M12 8v4m0 3v.5" />
+        </svg>
+        Change Vault Password
+      </button>
+    {/if}
+
+    <button
+      class="mt-2 flex w-full items-center justify-center gap-2 rounded-xl border border-line py-3 text-[14px] font-semibold text-ink active:bg-paper"
+      onclick={() => {
+        onclose();
+        vault.tutorialOpen = true;
+      }}
+    >
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="9" />
+        <path d="M9.5 9a2.5 2.5 0 0 1 4.9.6c0 1.6-2.4 2-2.4 3.4M12 17h.01" />
+      </svg>
+      Replay Tutorial
+    </button>
+
     <button
       class="mt-2 flex w-full items-center justify-center gap-2 rounded-xl bg-teal-soft py-3 text-[14px] font-semibold text-teal active:opacity-80"
       onclick={() => {

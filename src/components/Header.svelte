@@ -5,8 +5,8 @@
   let { query = $bindable(''), onbackup, onsettings } = $props();
   let showCredits = $state(false);
 
-  function themeTap() {
-    setTheme(vault.isDark ? 'light' : 'dark');
+  function themeTap(e) {
+    setTheme(vault.isDark ? 'light' : 'dark', { x: e.clientX, y: e.clientY });
   }
 
   function shieldTap() {
@@ -50,6 +50,7 @@
     <div class="flex items-center gap-1.5">
       <button
         class="flex h-9 w-9 items-center justify-center rounded-xl border border-line bg-card text-ink-soft transition-colors active:bg-line"
+        id="tour-settings"
         aria-label="Settings"
         onclick={onsettings}
       >
@@ -60,6 +61,7 @@
       </button>
       <button
         class="flex h-9 w-9 items-center justify-center rounded-xl border border-line bg-card text-ink-soft transition-colors active:bg-line"
+        id="tour-theme"
         aria-label={vault.isDark ? 'Switch to light mode' : 'Switch to dark mode'}
         onclick={themeTap}
       >
@@ -79,6 +81,7 @@
       <button
         class="flex h-9 w-9 items-center justify-center rounded-xl border transition-colors active:bg-line
           {vault.security.unlocked ? 'border-teal bg-teal-soft text-teal' : 'border-line bg-card text-ink-soft'}"
+        id="tour-shield"
         aria-label={!vault.security.configured
           ? 'Set vault password'
           : vault.security.unlocked
@@ -98,6 +101,7 @@
       </button>
       <button
         class="flex h-9 w-9 items-center justify-center rounded-xl border border-line bg-card text-ink-soft transition-colors active:bg-line"
+        id="tour-backup"
         aria-label="Backup and restore"
         onclick={onbackup}
       >
@@ -118,6 +122,7 @@
       <path d="m20 20-3.5-3.5" />
     </svg>
     <input
+      id="tour-search"
       type="search"
       bind:value={query}
       placeholder="Search prompts, links, notes, tags…"

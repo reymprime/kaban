@@ -242,3 +242,28 @@ button:active {
     transition: none;
   }
 }
+
+/* Theme wave: we drive the reveal ourselves via clip-path */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
+  mix-blend-mode: normal;
+}
+
+/* Tutorial spotlight — a hole punched through the dark overlay */
+.tour-spot {
+  box-shadow: 0 0 0 9999px rgb(0 0 0 / 0.65);
+  pointer-events: none;
+  animation: tour-pulse 1.6s ease-in-out infinite;
+}
+@keyframes tour-pulse {
+  0%,
+  100% {
+    outline: 3px solid color-mix(in srgb, var(--color-teal) 90%, transparent);
+    outline-offset: 0px;
+  }
+  50% {
+    outline: 3px solid color-mix(in srgb, var(--color-teal) 30%, transparent);
+    outline-offset: 6px;
+  }
+}

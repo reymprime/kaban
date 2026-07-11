@@ -15,6 +15,7 @@
   import ReorderList from './components/ReorderList.svelte';
   import FolderPickerModal from './components/FolderPickerModal.svelte';
   import RecapModal from './components/RecapModal.svelte';
+  import Tutorial from './components/Tutorial.svelte';
   import Toast from './components/Toast.svelte';
 
   let tab = $state('all');
@@ -251,6 +252,7 @@
       </div>
     {:else}
       <nav
+        id="tour-tabs"
         class="no-scrollbar flex gap-2 overflow-x-auto px-4 pb-3"
         aria-label="Categories"
       >
@@ -435,6 +437,7 @@
     <button
       class="fixed bottom-6 right-[max(1.25rem,calc(50%-16rem+1.25rem))] z-30 flex h-14 w-14 items-center justify-center rounded-2xl bg-teal text-white shadow-lg shadow-teal/30 transition-transform active:scale-95"
       style="margin-bottom: env(safe-area-inset-bottom);"
+      id="tour-fab"
       aria-label={showFabMenu ? 'Close menu' : 'Add new'}
       onclick={() => (showFabMenu = !showFabMenu)}
     >
@@ -526,6 +529,9 @@
     </div>
   {/if}
 
+  {#if vault.tutorialOpen}
+    <Tutorial onclose={() => (vault.tutorialOpen = false)} />
+  {/if}
   {#if vault.recapOpen}
     <RecapModal onclose={() => (vault.recapOpen = false)} />
   {/if}

@@ -1,14 +1,41 @@
 <script>
-  import { vault, setupPassword, unlockVault, toast } from '../lib/store.svelte.js';
+  import { vault, setupPassword, unlockVault, changePassword, toast } from '../lib/store.svelte.js';
 
-  let { mode, onclose } = $props(); // 'setup' | 'unlock'
+  let { mode, onclose } = $props(); // 'setup' | 'unlock' | 'change'
 
-  let password = $state('');
+  let password = $state(''); // current password (unlock/change) or new password (setup)
+  let newPassword = $state('');
   let confirm = $state('');
   let acknowledged = $state(false);
   let busy = $state(false);
   let error = $state('');
   let showPw = $state(false);
+
+  async function handleChange() {
+    error = '';
+    if (newPassword.length < 4) {
+      error = 'New password must be at least 4 characters.';
+      return;
+    }
+    if (newPassword !== confirm) {
+      error = 'New passwords do not match.';
+      return;
+    }
+    busy = true;
+    try {
+      const n = await changePassword(password, newPassword);
+      toast(
+        n
+          ? `Password changed — ${n} card${n === 1 ? '' : 's'} re-encrypted ✓`
+          : 'Password changed ✓'
+      );
+      onclose();
+    } catch (e) {
+      error = e.message || 'Something went wrong.';
+    } finally {
+      busy = false;
+    }
+  }
 
   async function handleSetup() {
     error = '';
@@ -56,7 +83,11 @@
   }
 
   function onKeydown(e) {
-    if (e.key === 'Enter') mode === 'setup' ? handleSetup() : handleUnlock();
+    if (e.key === 'Enter') {
+      if (mode === 'setup') handleSetup();
+      else if (mode === 'change') handleChange();
+      else handleUnlock();
+    }
   }
 </script>
 
@@ -79,7 +110,11 @@
         </svg>
       </div>
       <h2 class="font-display text-lg font-bold">
-        {mode === 'setup' ? 'Set vault password' : 'Unlock vault'}
+        {mode === 'setup'
+          ? 'Set vault password'
+          : mode === 'change'
+            ? 'Change vault password'
+            : 'Unlock vault'}
       </h2>
       <button
         class="ml-auto rounded-lg p-1.5 text-ink-soft active:bg-line"
@@ -113,6 +148,12 @@
           even the developer. Choose a password you will never forget.
         </p>
       </div>
+    {:else if mode === 'change'}
+      <p class="mb-4 text-[13px] text-ink-soft">
+        Enter your current password, then choose a new one. All protected
+        cards will be re-encrypted with the new password. The
+        <span class="font-semibold text-ink">no-recovery rule still applies</span>.
+      </p>
     {:else}
       <p class="mb-4 text-[13px] text-ink-soft">
         Enter your vault password to access protected cards for this session.
@@ -120,7 +161,7 @@
     {/if}
 
     <label class="mb-1 block text-[12px] font-semibold text-ink-soft" for="sec-pw">
-      Password
+      {mode === 'change' ? 'Current password' : 'Password'}
     </label>
     <div class="relative mb-3">
       <input
@@ -150,6 +191,31 @@
         {/if}
       </button>
     </div>
+
+    {#if mode === 'change'}
+      <label class="mb-1 block text-[12px] font-semibold text-ink-soft" for="sec-npw">
+        New password
+      </label>
+      <input
+        id="sec-npw"
+        type={showPw ? 'text' : 'password'}
+        bind:value={newPassword}
+        onkeydown={onKeydown}
+        autocomplete="off"
+        class="mb-3 w-full rounded-xl border border-line bg-paper px-3.5 py-2.5 text-[15px] focus:border-teal focus:outline-none"
+      />
+      <label class="mb-1 block text-[12px] font-semibold text-ink-soft" for="sec-npw2">
+        Confirm new password
+      </label>
+      <input
+        id="sec-npw2"
+        type={showPw ? 'text' : 'password'}
+        bind:value={confirm}
+        onkeydown={onKeydown}
+        autocomplete="off"
+        class="mb-3 w-full rounded-xl border border-line bg-paper px-3.5 py-2.5 text-[15px] focus:border-teal focus:outline-none"
+      />
+    {/if}
 
     {#if mode === 'setup'}
       <label class="mb-1 block text-[12px] font-semibold text-ink-soft" for="sec-pw2">
@@ -183,12 +249,24 @@
     <button
       class="w-full rounded-xl bg-teal py-3 text-[14px] font-semibold text-white active:opacity-90 disabled:opacity-50"
       disabled={busy}
-      onclick={mode === 'setup' ? handleSetup : handleUnlock}
+      onclick={mode === 'setup'
+        ? handleSetup
+        : mode === 'change'
+          ? handleChange
+          : handleUnlock}
     >
       {#if busy}
-        {mode === 'setup' ? 'Setting up…' : 'Checking…'}
+        {mode === 'setup'
+          ? 'Setting up…'
+          : mode === 'change'
+            ? 'Re-encrypting…'
+            : 'Checking…'}
       {:else}
-        {mode === 'setup' ? 'Set password & unlock' : 'Unlock'}
+        {mode === 'setup'
+          ? 'Set password & unlock'
+          : mode === 'change'
+            ? 'Change password'
+            : 'Unlock'}
       {/if}
     </button>
 

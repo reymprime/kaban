@@ -17,6 +17,7 @@ export const vault = $state({
   settings: { haptic: 'medium', sound: false, volume: 0.5 },
   stats: { days: {}, lastRecapAt: 0 },
   recapOpen: false,
+  tutorialOpen: false,
 });
 
 // Session-only. Never persisted. Cleared on lock or app close.
@@ -64,8 +65,12 @@ export async function loadVault() {
     for (const k of Object.keys(vault.stats.days)) {
       if (new Date(k + 'T12:00:00').getTime() < cutoff) delete vault.stats.days[k];
     }
-    // Time for a recap?
-    if (Date.now() - vault.stats.lastRecapAt >= WEEK) {
+    // First-run interactive tutorial
+    const tut = await db.getMeta('tutorial');
+    if (!tut) vault.tutorialOpen = true;
+
+    // Time for a recap? (tutorial takes priority — recap waits for next visit)
+    if (!vault.tutorialOpen && Date.now() - vault.stats.lastRecapAt >= WEEK) {
       vault.stats.lastRecapAt = Date.now();
       vault.recapOpen = true;
     }
@@ -106,9 +111,41 @@ export function applyTheme() {
   if (meta) meta.setAttribute('content', dark ? '#0E1013' : '#F6F7F9');
 }
 
-export async function setTheme(t) {
-  vault.theme = t;
-  applyTheme();
+export async function setTheme(t, origin = null) {
+  const apply = () => {
+    vault.theme = t;
+    applyTheme();
+  };
+  const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if (origin && document.startViewTransition && !reduce) {
+    // Circular wave reveal expanding from the theme button
+    try {
+      const vt = document.startViewTransition(apply);
+      await vt.ready;
+      const { x, y } = origin;
+      const r = Math.hypot(
+        Math.max(x, window.innerWidth - x),
+        Math.max(y, window.innerHeight - y)
+      );
+      document.documentElement.animate(
+        {
+          clipPath: [
+            `circle(0px at ${x}px ${y}px)`,
+            `circle(${r}px at ${x}px ${y}px)`,
+          ],
+        },
+        {
+          duration: 500,
+          easing: 'cubic-bezier(0.22, 1, 0.36, 1)',
+          pseudoElement: '::view-transition-new(root)',
+        }
+      );
+    } catch {
+      apply();
+    }
+  } else {
+    apply();
+  }
   try {
     await db.putMeta({ key: 'theme', value: t });
   } catch {}
@@ -260,6 +297,61 @@ export function lockNow() {
   sessionKey = null;
   vault.security.unlocked = false;
   vault.plain = {};
+}
+
+export async function changePassword(oldPw, newPw) {
+  if (!securityMeta) throw new Error('No vault password set');
+  // 1. Verify the current password
+  const oldKey = await deriveKey(oldPw, securityMeta.salt);
+  let ok = false;
+  try {
+    ok = (await decryptText(oldKey, securityMeta.verifier)) === 'kaban-ok';
+  } catch {
+    ok = false;
+  }
+  if (!ok) throw new Error('Current password is wrong');
+
+  // 2. Decrypt every protected card with the old key
+  const decrypted = [];
+  for (const i of vault.items) {
+    if (!i.protected) continue;
+    try {
+      decrypted.push([i, await decryptText(oldKey, i.content)]);
+    } catch {
+      /* foreign/corrupted cipher — leave it untouched */
+    }
+  }
+
+  // 3. Re-encrypt everything with the new password
+  const salt = makeSalt();
+  const newKey = await deriveKey(newPw, salt);
+  const verifier = await encryptText(newKey, 'kaban-ok');
+  const updates = [];
+  for (const [i, pt] of decrypted) {
+    const p = plain(i);
+    p.content = await encryptText(newKey, pt);
+    updates.push([p, pt]);
+  }
+  if (updates.length) await db.bulkPut(updates.map((u) => u[0]));
+
+  // 4. Save the new security meta and refresh the session
+  const meta = {
+    key: 'security',
+    salt,
+    verifier,
+    createdAt: securityMeta.createdAt || Date.now(),
+    updatedAt: Date.now(),
+  };
+  await db.putMeta(meta);
+  securityMeta = meta;
+  sessionKey = newKey;
+  vault.security.unlocked = true;
+  for (const [p, pt] of updates) {
+    const idx = vault.items.findIndex((x) => x.id === p.id);
+    vault.items[idx] = p;
+    vault.plain[p.id] = pt;
+  }
+  return updates.length;
 }
 
 export async function setProtection(item, on) {
