@@ -2,7 +2,7 @@
   import { lockScroll } from '../lib/scrollLock.js';
   let { onclose } = $props();
 
-  const version = 'v2.9.1';
+  const version = 'v34';
 
   function onBackdrop(e) {
     if (e.target === e.currentTarget) onclose();

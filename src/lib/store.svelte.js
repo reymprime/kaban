@@ -14,7 +14,7 @@ export const vault = $state({
   plain: {}, // id -> decrypted content while vault is unlocked (memory only)
   theme: 'auto', // 'auto' | 'light' | 'dark'
   isDark: false,
-  settings: { haptic: 'medium', sound: false, volume: 0.5, rotationLock: false },
+  settings: { haptic: 'medium', sound: false, volume: 0.5 },
   stats: { days: {}, lastRecapAt: 0 },
   recapOpen: false,
   tutorialOpen: false,
@@ -51,8 +51,8 @@ export async function loadVault() {
     if (settingsMeta?.value) Object.assign(vault.settings, settingsMeta.value);
     if (statsMeta?.value) Object.assign(vault.stats, statsMeta.value);
     applyTheme();
-    // Re-apply the saved orientation preference (works in the installed app)
-    applyRotationLock();
+    // Each device keeps its own UI — phones stay portrait (installed app)
+    lockPhoneToPortrait();
 
     // ---- Weekly recap bookkeeping ----
     const WEEK = 7 * 24 * 60 * 60 * 1000;
@@ -237,22 +237,21 @@ export async function saveSettings(patch) {
   } catch {}
 }
 
-// ---- Orientation lock ----
-// Locks the app to portrait when the user turns auto rotate off.
-// The Screen Orientation API only takes effect in the installed app
-// (standalone PWA) — in a normal browser tab, the preference is saved
-// and applies as soon as Kaban runs installed.
-export async function applyRotationLock() {
+// ---- Device-fit UI ----
+// Each device gets its own UI, permanently — no rotation adjustment:
+//   • Phone   → portrait phone layout, locked
+//   • Tablet  → tablet layout (fluid grid fits its width)
+//   • Computer→ desktop layout (orientation doesn't apply)
+// The lock takes effect in the installed app / Play Store build; browser
+// tabs don't allow orientation locking, but the layout stays correct there.
+function lockPhoneToPortrait() {
   try {
-    if (vault.settings.rotationLock) {
-      await screen.orientation.lock('portrait');
-    } else {
-      screen.orientation.unlock();
+    // Smallest screen side < 600px = phone. Tablets/desktops stay free.
+    const isPhone = Math.min(screen.width, screen.height) < 600;
+    if (isPhone && screen.orientation?.lock) {
+      screen.orientation.lock('portrait').catch(() => {});
     }
-    return true;
-  } catch {
-    return false;
-  }
+  } catch {}
 }
 
 export function tapFeedback() {

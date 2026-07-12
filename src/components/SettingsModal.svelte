@@ -1,21 +1,8 @@
 <script>
   import { lockScroll } from '../lib/scrollLock.js';
-  import { vault, saveSettings, tapFeedback, applyRotationLock, toast } from '../lib/store.svelte.js';
+  import { vault, saveSettings, tapFeedback } from '../lib/store.svelte.js';
 
   let { onclose } = $props();
-
-  async function setAutoRotate(on) {
-    // rotationLock is the inverse: auto rotate OFF = locked to portrait
-    await saveSettings({ rotationLock: !on });
-    const ok = await applyRotationLock();
-    if (on) {
-      toast('Auto rotate on — the app follows your phone');
-    } else if (ok) {
-      toast('Auto rotate off — locked to portrait');
-    } else {
-      toast('Saved — takes effect in the installed Kaban app');
-    }
-  }
 
   const HAPTICS = [
     { id: 'off', label: 'Off' },
@@ -137,36 +124,6 @@
         class="mb-3 w-full accent-[#0F766E]"
       />
     {/if}
-
-    <!-- Auto rotate -->
-    <div class="mb-1 flex items-center gap-2">
-      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--color-teal)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <rect x="7" y="3" width="10" height="18" rx="2.5" />
-        <path d="M20.5 9.5a9 9 0 0 1 0 5M3.5 14.5a9 9 0 0 1 0-5" />
-        <path d="m19 13 1.5 1.5L22 13M5 11l-1.5-1.5L2 11" />
-      </svg>
-      <p class="text-[13px] font-semibold">Auto rotate</p>
-    </div>
-    <p class="mb-2 text-[12px] text-ink-soft">
-      Let Kaban switch to landscape when you rotate your phone. Turn off to
-      keep it locked in portrait.
-    </p>
-    <div class="mb-5 grid grid-cols-2 gap-2">
-      <button
-        class="rounded-xl border py-2.5 text-[13px] font-semibold transition-colors
-          {vault.settings.rotationLock ? 'border-teal bg-teal-soft text-teal' : 'border-line text-ink-soft'}"
-        onclick={() => setAutoRotate(false)}
-      >
-        Off
-      </button>
-      <button
-        class="rounded-xl border py-2.5 text-[13px] font-semibold transition-colors
-          {!vault.settings.rotationLock ? 'border-teal bg-teal-soft text-teal' : 'border-line text-ink-soft'}"
-        onclick={() => setAutoRotate(true)}
-      >
-        On
-      </button>
-    </div>
 
     <button
       class="mt-1 w-full rounded-xl border border-line py-3 text-[14px] font-semibold text-ink active:bg-paper"
