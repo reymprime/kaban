@@ -44,25 +44,32 @@
   function pressCancel() {
     clearTimeout(pressTimer);
   }
-  // Swipe left on a Stored Link card → reveal its Linked Notes.
-  // Swipe right while the panel is open → put it away.
+  // Swipe RIGHT on a Stored Link card → reveal its Linked Notes.
+  // Swipe left while the panel is open → put it away.
+  let swipeFired = false;
   function pressEnd(e) {
     pressCancel();
     if (selecting || item.type !== 'link') return;
     const dx = e.clientX - startX;
     const dy = e.clientY - startY;
-    const horizontal = Math.abs(dx) > 48 && Math.abs(dx) > Math.abs(dy) * 1.5;
+    const horizontal = Math.abs(dx) > 40 && Math.abs(dx) > Math.abs(dy) * 1.5;
     if (!horizontal) return;
-    if (dx < 0 && !showLinked) showLinked = true;
-    else if (dx > 0 && showLinked) showLinked = false;
+    if (dx > 0 && !showLinked) {
+      showLinked = true;
+      swipeFired = true;
+    } else if (dx < 0 && showLinked) {
+      showLinked = false;
+      swipeFired = true;
+    }
   }
   // Swallow the click that fires on finger release after a long-press,
   // so it doesn't immediately toggle the fresh selection off
   function swallowClick(e) {
-    if (longPressFired) {
+    if (longPressFired || swipeFired) {
       e.stopPropagation();
       e.preventDefault();
       longPressFired = false;
+      swipeFired = false;
     }
   }
 
@@ -163,7 +170,7 @@
 <li
   class="relative flex flex-col overflow-hidden rounded-2xl border bg-card transition-[scale,box-shadow] duration-100 active:scale-[0.99]
     {isSelected ? 'border-teal shadow-[0_0_0_2px_var(--color-teal)]' : locked ? 'border-ink/15' : 'border-line'}"
-  style="border-left: 4px solid {isSelected ? 'var(--color-teal)' : cat.color};"
+  style="border-left: 4px solid {isSelected ? 'var(--color-teal)' : cat.color}; touch-action: pan-y;"
   onpointerdown={pressStart}
   onpointerup={pressEnd}
   onpointermove={pressMove}
@@ -208,8 +215,9 @@
           {/if}
           {#if linkedNotes.length}
             <span
-              class="flex items-center gap-0.5 rounded-md bg-teal-soft px-1.5 py-0.5 text-[10px] font-semibold text-teal"
-              aria-label="{linkedNotes.length} linked notes — swipe left to view"
+              class="flex items-center gap-0.5 rounded-md px-1.5 py-0.5 text-[10px] font-semibold"
+              style="background: {cat.soft}; color: {cat.color};"
+              aria-label="{linkedNotes.length} linked notes — swipe right to view"
             >
               <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                 <path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7" />
@@ -436,17 +444,23 @@
   </div>
 
   {#if showLinked && !selecting}
-    <!-- Linked Notes panel: slides in from the right, scrolls vertically -->
-    <div class="slide-in-left absolute inset-0 z-10 flex flex-col bg-card">
-      <div class="flex items-center justify-between border-b border-line px-4 py-2.5">
-        <div class="flex items-center gap-1.5">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--color-teal)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <!-- Linked Notes panel: swiped in from the left, Stored Link blue -->
+    <div class="slide-in-right absolute inset-0 z-10 flex flex-col bg-card">
+      <div
+        class="flex items-center justify-between border-b border-line px-4 py-2.5"
+        style="background: {cat.soft};"
+      >
+        <div class="flex items-center gap-1.5" style="color: {cat.color};">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7" />
             <path d="M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7" />
           </svg>
           <p class="text-[13px] font-semibold">Linked Notes</p>
           {#if linkedNotes.length}
-            <span class="rounded-md bg-teal-soft px-1.5 py-0.5 text-[10px] font-semibold text-teal">
+            <span
+              class="rounded-md px-1.5 py-0.5 text-[10px] font-semibold text-white"
+              style="background: {cat.color};"
+            >
               {linkedNotes.length}
             </span>
           {/if}
@@ -473,7 +487,7 @@
                   <span class="block truncate text-[13px] font-semibold">{n.title}</span>
                   <span class="block truncate text-[11px] text-ink-soft">{notePreview(n)}</span>
                 </span>
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="shrink-0 text-ink-soft/60">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="shrink-0" style="stroke: {cat.color};">
                   <path d="m9 18 6-6-6-6" />
                 </svg>
               </button>

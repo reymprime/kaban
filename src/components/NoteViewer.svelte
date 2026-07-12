@@ -33,7 +33,7 @@
     await setNoteLink(current.id, linkId);
     current = { ...current, linkedTo: linkId || null };
     showLinkPicker = false;
-    toast(linkId ? 'Linked ✓ — swipe left on that card to see it' : 'Link removed');
+    toast(linkId ? 'Linked ✓ — swipe right on that card to see it' : 'Link removed');
   }
 
   function linkHost(l) {
