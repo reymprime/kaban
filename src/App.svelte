@@ -9,6 +9,7 @@
   import ConfirmModal from './components/ConfirmModal.svelte';
   import BackupModal from './components/BackupModal.svelte';
   import NoteViewer from './components/NoteViewer.svelte';
+  import WatchModal from './components/WatchModal.svelte';
   import FolderModal from './components/FolderModal.svelte';
   import SecurityModal from './components/SecurityModal.svelte';
   import SettingsModal from './components/SettingsModal.svelte';
@@ -23,6 +24,7 @@
   let editing = $state(null); // item object (edit) or { type } (new)
   let deleting = $state(null); // item pending delete confirmation
   let viewing = $state(null); // note being viewed full screen
+  let watching = $state(null); // YouTube link playing in the Watch modal
   let viewAutoEdit = $state(false); // open the viewer straight into edit mode
   let showBackup = $state(false);
   let showSettings = $state(false);
@@ -372,6 +374,10 @@
               (viewing = item.protected
                 ? { ...item, tags: [...item.tags], content: vault.plain[item.id] ?? '' }
                 : item)}
+            onwatch={() =>
+              (watching = item.protected
+                ? { ...item, content: vault.plain[item.id] ?? '' }
+                : item)}
             onselectstart={() => startSelect(item.id)}
             ontoggleselect={() => toggleSelect(item.id)}
           />
@@ -567,6 +573,9 @@
         viewAutoEdit = false;
       }}
     />
+  {/if}
+  {#if watching}
+    <WatchModal item={watching} onclose={() => (watching = null)} />
   {/if}
   {#if editing}
     <EditorModal

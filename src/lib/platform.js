@@ -33,3 +33,16 @@ export function normalizeUrl(url) {
   if (/^https?:\/\//i.test(trimmed)) return trimmed;
   return 'https://' + trimmed;
 }
+
+// ---- YouTube Watch feature ----
+// Extracts the 11-character video ID from any YouTube URL shape:
+//   watch?v=..., youtu.be/..., /shorts/..., /embed/..., /live/..., /v/...
+// including m.youtube.com and music.youtube.com subdomains.
+// Returns null for non-YouTube links — that's what hides the Watch button.
+// No API keys, no quota: pure RegEx → iframe embed.
+export function getYouTubeId(url = '') {
+  const m = String(url).match(
+    /(?:youtube\.com\/(?:watch\?(?:[^#]*&)?v=|shorts\/|embed\/|live\/|v\/)|youtu\.be\/)([A-Za-z0-9_-]{11})(?![A-Za-z0-9_-])/
+  );
+  return m ? m[1] : null;
+}

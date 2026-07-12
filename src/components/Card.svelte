@@ -1,6 +1,6 @@
 <script>
   import { CATEGORIES } from '../lib/categories.js';
-  import { detectPlatform, normalizeUrl } from '../lib/platform.js';
+  import { detectPlatform, normalizeUrl, getYouTubeId } from '../lib/platform.js';
   import { vault, copyText, togglePin, toggleLock, setProtection, toast } from '../lib/store.svelte.js';
   import { htmlToText } from '../lib/richtext.js';
 
@@ -11,6 +11,7 @@
     onedit,
     ondelete,
     onview,
+    onwatch,
     onselectstart,
     ontoggleselect,
   } = $props();
@@ -63,6 +64,10 @@
   );
   const platform = $derived(
     item.type === 'link' && accessible ? detectPlatform(contentText) : null
+  );
+  // YouTube links get a Watch button — null for everything else hides it
+  const ytId = $derived(
+    item.type === 'link' && accessible ? getYouTubeId(contentText) : null
   );
   // Links lose copy access when locked; prompts and notes keep copy
   const copyBlocked = $derived(locked && item.type === 'link');
@@ -302,6 +307,20 @@
         Open
       </a>
       <div class="h-6 w-px bg-line"></div>
+      {#if ytId}
+        <!-- Watch (YouTube links only) -->
+        <button
+          class="flex flex-1 items-center justify-center gap-1.5 py-2.5 text-[13px] font-semibold text-[#FF0033] transition-colors active:bg-paper"
+          onclick={onwatch}
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="9" />
+            <path d="m10 8.5 5 3.5-5 3.5v-7Z" fill="currentColor" stroke="none" />
+          </svg>
+          Watch
+        </button>
+        <div class="h-6 w-px bg-line"></div>
+      {/if}
     {/if}
 
     <!-- Copy -->
