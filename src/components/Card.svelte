@@ -465,15 +465,15 @@
             </span>
           {/if}
         </div>
-        <button
-          class="rounded-lg p-1.5 text-ink-soft active:bg-line"
-          aria-label="Close linked notes"
-          onclick={() => (showLinked = false)}
+        <span
+          class="flex items-center gap-1 text-[11px] font-medium opacity-80"
+          style="color: {cat.color};"
         >
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round">
-            <path d="M6 6l12 12M18 6 6 18" />
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M19 12H5m0 0 6-6m-6 6 6 6" />
           </svg>
-        </button>
+          Swipe left to go back
+        </span>
       </div>
       {#if linkedNotes.length}
         <ul class="min-h-0 flex-1 overflow-y-auto overscroll-contain px-2 py-1.5">

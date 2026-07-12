@@ -2,7 +2,7 @@
   import { lockScroll } from '../lib/scrollLock.js';
   let { onclose } = $props();
 
-  const version = 'v37';
+  const version = 'v38';
 
   function onBackdrop(e) {
     if (e.target === e.currentTarget) onclose();
@@ -44,7 +44,7 @@
 
       <p class="mb-4 text-[12px] leading-relaxed text-ink-soft">
         Built with Svelte, crafted entirely on Android.
-        Your prompts stay on your device — private, offline, yours.
+        Your prompts never leave your device. Private. Offline. Always yours.
       </p>
 
       <a
