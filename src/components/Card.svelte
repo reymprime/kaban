@@ -12,6 +12,7 @@
     ondelete,
     onview,
     onwatch,
+    onviewnote,
     onselectstart,
     ontoggleselect,
   } = $props();
@@ -25,10 +26,11 @@
   let longPressFired = false;
 
   function pressStart(e) {
-    if (selecting) return;
     startX = e.clientX;
     startY = e.clientY;
     longPressFired = false;
+    // No long-press while selecting or while the Linked Notes panel is open
+    if (selecting || showLinked) return;
     pressTimer = setTimeout(() => {
       longPressFired = true;
       onselectstart?.();
@@ -41,6 +43,18 @@
   }
   function pressCancel() {
     clearTimeout(pressTimer);
+  }
+  // Swipe left on a Stored Link card → reveal its Linked Notes.
+  // Swipe right while the panel is open → put it away.
+  function pressEnd(e) {
+    pressCancel();
+    if (selecting || item.type !== 'link') return;
+    const dx = e.clientX - startX;
+    const dy = e.clientY - startY;
+    const horizontal = Math.abs(dx) > 48 && Math.abs(dx) > Math.abs(dy) * 1.5;
+    if (!horizontal) return;
+    if (dx < 0 && !showLinked) showLinked = true;
+    else if (dx > 0 && showLinked) showLinked = false;
   }
   // Swallow the click that fires on finger release after a long-press,
   // so it doesn't immediately toggle the fresh selection off
@@ -69,6 +83,30 @@
   const ytId = $derived(
     item.type === 'link' && accessible ? getYouTubeId(contentText) : null
   );
+
+  // ---- Linked Notes (revealed by swiping left on the card) ----
+  let showLinked = $state(false);
+  const linkedNotes = $derived(
+    item.type === 'link'
+      ? vault.items.filter((n) => n.type === 'note' && n.linkedTo === item.id)
+      : []
+  );
+  // Entering selection mode puts the panel away
+  $effect(() => {
+    if (selecting) showLinked = false;
+  });
+
+  function openLinkedNote(n) {
+    if (n.protected && !(vault.security.unlocked && vault.plain[n.id] != null)) {
+      return promptUnlock();
+    }
+    onviewnote?.(n);
+  }
+
+  function notePreview(n) {
+    if (n.protected) return 'Protected — encrypted note';
+    return htmlToText(n.content).slice(0, 80);
+  }
   // Links lose copy access when locked; prompts and notes keep copy
   const copyBlocked = $derived(locked && item.type === 'link');
   // Rich notes are stored as HTML — preview and copy use plain text
@@ -127,7 +165,7 @@
     {isSelected ? 'border-teal shadow-[0_0_0_2px_var(--color-teal)]' : locked ? 'border-ink/15' : 'border-line'}"
   style="border-left: 4px solid {isSelected ? 'var(--color-teal)' : cat.color};"
   onpointerdown={pressStart}
-  onpointerup={pressCancel}
+  onpointerup={pressEnd}
   onpointermove={pressMove}
   onpointerleave={pressCancel}
   onpointercancel={pressCancel}
@@ -166,6 +204,18 @@
               style="background: {platform.color};"
             >
               {platform.name}
+            </span>
+          {/if}
+          {#if linkedNotes.length}
+            <span
+              class="flex items-center gap-0.5 rounded-md bg-teal-soft px-1.5 py-0.5 text-[10px] font-semibold text-teal"
+              aria-label="{linkedNotes.length} linked notes — swipe left to view"
+            >
+              <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7" />
+                <path d="M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7" />
+              </svg>
+              {linkedNotes.length}
             </span>
           {/if}
           {#if item.pinned}
@@ -384,4 +434,57 @@
     </button>
     {/if}
   </div>
+
+  {#if showLinked && !selecting}
+    <!-- Linked Notes panel: slides in from the right, scrolls vertically -->
+    <div class="slide-in-left absolute inset-0 z-10 flex flex-col bg-card">
+      <div class="flex items-center justify-between border-b border-line px-4 py-2.5">
+        <div class="flex items-center gap-1.5">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--color-teal)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7" />
+            <path d="M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7" />
+          </svg>
+          <p class="text-[13px] font-semibold">Linked Notes</p>
+          {#if linkedNotes.length}
+            <span class="rounded-md bg-teal-soft px-1.5 py-0.5 text-[10px] font-semibold text-teal">
+              {linkedNotes.length}
+            </span>
+          {/if}
+        </div>
+        <button
+          class="rounded-lg p-1.5 text-ink-soft active:bg-line"
+          aria-label="Close linked notes"
+          onclick={() => (showLinked = false)}
+        >
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round">
+            <path d="M6 6l12 12M18 6 6 18" />
+          </svg>
+        </button>
+      </div>
+      {#if linkedNotes.length}
+        <ul class="min-h-0 flex-1 overflow-y-auto overscroll-contain px-2 py-1.5">
+          {#each linkedNotes as n (n.id)}
+            <li>
+              <button
+                class="flex w-full items-center gap-2 rounded-xl px-2.5 py-2 text-left transition-colors active:bg-paper"
+                onclick={() => openLinkedNote(n)}
+              >
+                <span class="min-w-0 flex-1">
+                  <span class="block truncate text-[13px] font-semibold">{n.title}</span>
+                  <span class="block truncate text-[11px] text-ink-soft">{notePreview(n)}</span>
+                </span>
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="shrink-0 text-ink-soft/60">
+                  <path d="m9 18 6-6-6-6" />
+                </svg>
+              </button>
+            </li>
+          {/each}
+        </ul>
+      {:else}
+        <p class="flex flex-1 items-center justify-center px-6 py-4 text-center text-[12px] text-ink-soft">
+          No linked notes yet — open a note's writer and tap "Link to"
+        </p>
+      {/if}
+    </div>
+  {/if}
 </li>

@@ -2,7 +2,8 @@
   import { lockScroll } from '../lib/scrollLock.js';
   import { tick } from 'svelte';
   import * as db from '../lib/db.js';
-  import { copyText, saveItem, toast } from '../lib/store.svelte.js';
+  import { vault, copyText, saveItem, setNoteLink, toast } from '../lib/store.svelte.js';
+  import { detectPlatform } from '../lib/platform.js';
   import { isHtml, textToHtml, htmlToText, sanitizeHtml } from '../lib/richtext.js';
   import FormatBar from './FormatBar.svelte';
 
@@ -23,6 +24,22 @@
   let saving = $state(false);
 
   let focusEl = $state(null);
+
+  // ---- Link to (attach this note to a Stored Link) ----
+  let showLinkPicker = $state(false);
+  const storedLinks = $derived(vault.items.filter((i) => i.type === 'link'));
+
+  async function pickLink(linkId) {
+    await setNoteLink(current.id, linkId);
+    current = { ...current, linkedTo: linkId || null };
+    showLinkPicker = false;
+    toast(linkId ? 'Linked ✓ — swipe left on that card to see it' : 'Link removed');
+  }
+
+  function linkHost(l) {
+    if (l.protected) return 'Protected link';
+    return detectPlatform(l.content)?.host || l.content;
+  }
 
   // ---- Draft auto-save (accident insurance) ----
   const draftKey = () => 'draft:' + current.id;
@@ -358,6 +375,18 @@
             </button>
           {/if}
           <button
+            class="flex items-center gap-1 rounded-lg px-2 py-1.5 text-[12px] font-semibold active:bg-paper
+              {current.linkedTo ? 'text-teal' : 'text-ink-soft'}"
+            aria-label="Link this note to a Stored Link"
+            onclick={() => (showLinkPicker = true)}
+          >
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7" />
+              <path d="M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7" />
+            </svg>
+            Link to
+          </button>
+          <button
             class="rounded-xl bg-teal px-4 py-1.5 text-[12px] font-semibold text-white active:opacity-90 disabled:opacity-50"
             disabled={saving}
             onclick={save}
@@ -379,6 +408,72 @@
       {#if showBar}
         <FormatBar onclose={() => (showBar = false)} />
       {/if}
+    </div>
+  {/if}
+
+  {#if showLinkPicker}
+    <!-- Stored Link picker -->
+    <div
+      class="absolute inset-0 z-20 flex items-end justify-center bg-ink/40 backdrop-blur-sm sm:items-center"
+      onclick={(e) => e.target === e.currentTarget && (showLinkPicker = false)}
+      role="presentation"
+    >
+      <div
+        class="pop-in flex max-h-[70%] w-full max-w-lg flex-col rounded-t-3xl bg-card sm:rounded-3xl"
+        role="dialog"
+        aria-modal="true"
+        aria-label="Link to a Stored Link"
+        style="padding-bottom: env(safe-area-inset-bottom);"
+      >
+        <div class="flex items-center justify-between px-5 pb-2 pt-5">
+          <h2 class="font-display text-lg font-bold">Link to</h2>
+          <button
+            class="rounded-lg p-1.5 text-ink-soft active:bg-paper"
+            aria-label="Close"
+            onclick={() => (showLinkPicker = false)}
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round">
+              <path d="M6 6l12 12M18 6 6 18" />
+            </svg>
+          </button>
+        </div>
+        <p class="px-5 pb-3 text-[12px] text-ink-soft">
+          Attach this note as extra information to a Stored Link.
+        </p>
+        <div class="min-h-0 flex-1 overflow-y-auto px-3 pb-3">
+          {#if !storedLinks.length}
+            <p class="px-2 py-6 text-center text-[13px] text-ink-soft">
+              No Stored Links yet — save a link first, then attach this note to it.
+            </p>
+          {:else}
+            {#each storedLinks as l (l.id)}
+              <button
+                class="flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left transition-colors active:bg-paper
+                  {current.linkedTo === l.id ? 'bg-teal-soft/50' : ''}"
+                onclick={() => pickLink(l.id)}
+              >
+                <span class="min-w-0 flex-1">
+                  <span class="block truncate text-[14px] font-semibold">{l.title}</span>
+                  <span class="block truncate text-[12px] text-ink-soft">{linkHost(l)}</span>
+                </span>
+                {#if current.linkedTo === l.id}
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--color-teal)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="shrink-0">
+                    <path d="m5 13 4 4L19 7" />
+                  </svg>
+                {/if}
+              </button>
+            {/each}
+            {#if current.linkedTo}
+              <button
+                class="mt-1 flex w-full items-center justify-center gap-1.5 rounded-xl border border-line py-2.5 text-[13px] font-semibold text-ink-soft active:bg-paper"
+                onclick={() => pickLink(null)}
+              >
+                Remove link
+              </button>
+            {/if}
+          {/if}
+        </div>
+      </div>
     </div>
   {/if}
 </div>

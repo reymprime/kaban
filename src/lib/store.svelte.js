@@ -433,6 +433,8 @@ function plain(i) {
     locked: !!i.locked,
     protected: !!i.protected,
     folderId: i.folderId || null,
+    // Notes only: id of the Stored Link this note is attached to
+    linkedTo: i.linkedTo || null,
     order: typeof i.order === 'number' ? i.order : null,
     createdAt: i.createdAt,
     updatedAt: i.updatedAt,
@@ -468,6 +470,7 @@ export async function saveItem(data) {
     locked: existing ? !!existing.locked : false,
     protected: isProtected,
     order: existing && typeof existing.order === 'number' ? existing.order : null,
+    linkedTo: existing ? existing.linkedTo || null : null,
     // Preserve folder when caller (e.g. NoteViewer) doesn't send folderId
     folderId:
       data.folderId !== undefined
@@ -574,6 +577,27 @@ export async function deleteItem(id) {
   await db.remove(id);
   vault.items = vault.items.filter((i) => i.id !== id);
   delete vault.plain[id];
+  // Deleting a Stored Link detaches any notes that were linked to it
+  for (const n of vault.items) {
+    if (n.linkedTo === id) {
+      const updated = plain(n);
+      updated.linkedTo = null;
+      await db.put(updated);
+      vault.items[vault.items.findIndex((i) => i.id === n.id)] = updated;
+    }
+  }
+}
+
+// ---- Linked Notes ----
+// A note can be attached to one Stored Link as extra information.
+// Swiping left on that link's card reveals every note linked to it.
+export async function setNoteLink(id, linkId) {
+  const idx = vault.items.findIndex((i) => i.id === id);
+  if (idx === -1) return;
+  const updated = plain(vault.items[idx]);
+  updated.linkedTo = linkId || null;
+  await db.put(updated);
+  vault.items[idx] = updated;
 }
 
 export async function togglePin(item) {

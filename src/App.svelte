@@ -378,6 +378,10 @@
               (watching = item.protected
                 ? { ...item, content: vault.plain[item.id] ?? '' }
                 : item)}
+            onviewnote={(note) =>
+              (viewing = note.protected
+                ? { ...note, tags: [...note.tags], content: vault.plain[note.id] ?? '' }
+                : note)}
             onselectstart={() => startSelect(item.id)}
             ontoggleselect={() => toggleSelect(item.id)}
           />
