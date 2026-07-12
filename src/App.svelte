@@ -209,7 +209,7 @@
   }
 </script>
 
-<div class="mx-auto flex min-h-dvh max-w-lg flex-col">
+<div class="shell-max mx-auto flex min-h-dvh w-full flex-col">
   <div class="sticky top-0 z-20 border-b border-line/60 bg-paper">
     <Header
       bind:query
@@ -284,7 +284,7 @@
       />
     {:else}
     {#if visibleFolders.length}
-      <ul class="mb-3 flex flex-col gap-2">
+      <ul class="folder-grid mb-3">
         {#each visibleFolders as f (f.id)}
           <li class="relative">
             <button
@@ -357,7 +357,7 @@
         {/if}
       </div>
     {:else}
-      <ul class="flex flex-col gap-3">
+      <ul class="card-grid">
         {#each filtered as item (item.id)}
           <Card
             {item}
@@ -391,7 +391,7 @@
         aria-label="Close menu"
         onclick={() => (showFabMenu = false)}
       ></button>
-      <div class="fixed bottom-24 right-[max(1.25rem,calc(50%-16rem+1.25rem))] z-30 flex flex-col items-end gap-2">
+      <div class="fab-right fixed bottom-24 z-30 flex flex-col items-end gap-2">
         <button
           class="pop-in flex items-center gap-2 rounded-2xl border border-line bg-card py-3 pl-4 pr-5 text-[14px] font-semibold shadow-lg active:bg-paper"
           onclick={() => {
@@ -435,7 +435,7 @@
       </div>
     {/if}
     <button
-      class="fixed bottom-6 right-[max(1.25rem,calc(50%-16rem+1.25rem))] z-30 flex h-14 w-14 items-center justify-center rounded-2xl bg-teal text-white shadow-lg shadow-teal/30 transition-transform active:scale-95"
+      class="fab-right fixed bottom-6 z-30 flex h-14 w-14 items-center justify-center rounded-2xl bg-teal text-white shadow-lg shadow-teal/30 transition-transform active:scale-95"
       style="margin-bottom: env(safe-area-inset-bottom);"
       id="tour-fab"
       aria-label={showFabMenu ? 'Close menu' : 'Add new'}
@@ -457,7 +457,7 @@
   {:else}
     <!-- Selection action bar -->
     <div
-      class="pop-in fixed bottom-0 left-1/2 z-30 flex w-full max-w-lg -translate-x-1/2 items-center gap-1.5 border-t border-line bg-card px-3 py-3"
+      class="pop-in fixed bottom-0 left-1/2 z-30 shell-max flex w-full -translate-x-1/2 items-center gap-1.5 border-t border-line bg-card px-3 py-3"
       style="padding-bottom: calc(0.75rem + env(safe-area-inset-bottom));"
     >
       <button

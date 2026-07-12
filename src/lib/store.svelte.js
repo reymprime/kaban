@@ -100,6 +100,16 @@ export async function loadVault() {
 
 // ---- Theme ----
 
+// Follow the OS theme live while in 'auto' — fires when the system
+// switches dark/light (night schedule, quick-settings toggle, etc.)
+if (typeof window !== 'undefined') {
+  window
+    .matchMedia('(prefers-color-scheme: dark)')
+    .addEventListener('change', () => {
+      if (vault.theme === 'auto') applyTheme();
+    });
+}
+
 export function applyTheme() {
   const pref = vault.theme;
   const dark =
@@ -111,14 +121,20 @@ export function applyTheme() {
   if (meta) meta.setAttribute('content', dark ? '#0E1013' : '#F6F7F9');
 }
 
+let themeWaving = false;
+
 export async function setTheme(t, origin = null) {
   const apply = () => {
     vault.theme = t;
     applyTheme();
   };
   const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  if (origin && document.startViewTransition && !reduce) {
-    // Circular wave reveal expanding from the theme button
+  // Rapid re-taps while a wave is mid-flight apply instantly instead of
+  // stacking a second view transition on top of the first (which errors).
+  if (origin && document.startViewTransition && !reduce && !themeWaving) {
+    themeWaving = true;
+    // Freeze all CSS transitions so the snapshot paints in one frame
+    document.documentElement.classList.add('theme-wave');
     try {
       const vt = document.startViewTransition(apply);
       await vt.ready;
@@ -127,6 +143,7 @@ export async function setTheme(t, origin = null) {
         Math.max(x, window.innerWidth - x),
         Math.max(y, window.innerHeight - y)
       );
+      // Circular wave reveal expanding from the theme button
       document.documentElement.animate(
         {
           clipPath: [
@@ -135,13 +152,17 @@ export async function setTheme(t, origin = null) {
           ],
         },
         {
-          duration: 500,
+          duration: 420,
           easing: 'cubic-bezier(0.22, 1, 0.36, 1)',
           pseudoElement: '::view-transition-new(root)',
         }
       );
+      await vt.finished;
     } catch {
       apply();
+    } finally {
+      document.documentElement.classList.remove('theme-wave');
+      themeWaving = false;
     }
   } else {
     apply();

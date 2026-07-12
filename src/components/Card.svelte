@@ -118,7 +118,7 @@
 </script>
 
 <li
-  class="relative overflow-hidden rounded-2xl border bg-card transition-[scale,box-shadow] duration-100 active:scale-[0.99]
+  class="relative flex flex-col overflow-hidden rounded-2xl border bg-card transition-[scale,box-shadow] duration-100 active:scale-[0.99]
     {isSelected ? 'border-teal shadow-[0_0_0_2px_var(--color-teal)]' : locked ? 'border-ink/15' : 'border-line'}"
   style="border-left: 4px solid {isSelected ? 'var(--color-teal)' : cat.color};"
   onpointerdown={pressStart}
@@ -276,7 +276,7 @@
   </div>
 
   <!-- Action row -->
-  <div class="flex items-center border-t border-line">
+  <div class="mt-auto flex items-center border-t border-line">
     {#if !accessible}
       <button
         class="flex flex-1 items-center justify-center gap-1.5 py-2.5 text-[13px] font-semibold text-teal transition-colors active:bg-paper"

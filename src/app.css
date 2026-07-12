@@ -250,6 +250,53 @@ button:active {
   mix-blend-mode: normal;
 }
 
+/* While the wave runs, freeze EVERY color/property transition so the
+   new-theme snapshot renders instantly and the clip-path sweeps over a
+   static layer — no hundreds of concurrent repaints fighting the wave. */
+html.theme-wave *,
+html.theme-wave *::before,
+html.theme-wave *::after {
+  transition: none !important;
+}
+
+/* ---- Responsive shell ----
+   Portrait phones keep the cozy single column. Anything wider —
+   landscape phones, tablets, laptops — the shell EATS the whole
+   screen (capped at 80rem on huge monitors so cards never balloon).
+   Pure CSS, so it re-adapts instantly on resize or rotation. */
+:root {
+  --shell-w: 32rem;
+}
+@media (min-width: 640px) {
+  :root {
+    --shell-w: min(100%, 80rem);
+  }
+}
+
+.shell-max {
+  max-width: var(--shell-w);
+}
+
+/* Fixed elements hug the right edge of the shell, never the viewport */
+.fab-right {
+  right: max(1.25rem, calc(50% - var(--shell-w) / 2 + 1.25rem));
+}
+
+/* ---- Auto-fill grids ----
+   The grid decides the column count from the available width:
+   1 col on portrait phones, 2 on landscape, 3–4 on laptops.
+   No breakpoints to outgrow — it just fills whatever space exists. */
+.card-grid {
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 21rem), 1fr));
+}
+.folder-grid {
+  display: grid;
+  gap: 0.5rem;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 16rem), 1fr));
+}
+
 /* Tutorial spotlight — a hole punched through the dark overlay */
 .tour-spot {
   box-shadow: 0 0 0 9999px rgb(0 0 0 / 0.65);
