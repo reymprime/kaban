@@ -22,6 +22,7 @@
     title = 'Embedded resource',
     trusted = true,
     allowForms = true,
+    preset = 'default', // 'default' | 'youtube'
     ratio = '16 / 9', // CSS aspect-ratio; use null to fill the parent height
     class: className = '',
   } = $props();
@@ -29,15 +30,24 @@
   let loaded = $state(false);
   let failed = $state(false);
 
+  // YouTube's embed is a trusted first-party player from youtube-nocookie.com.
+  // It genuinely needs popups + presentation to initialise — without them the
+  // player fails with "Error 153 / Video player configuration error" before it
+  // ever plays. This permission is granted ONLY to the youtube preset; the
+  // default preset (untrusted research embeds) stays locked with no popups.
+  const isYouTube = $derived(preset === 'youtube');
+
   // Build the sandbox token list from the trust level + options.
   const sandbox = $derived(
-    [
-      'allow-scripts',
-      trusted && 'allow-same-origin',
-      allowForms && 'allow-forms',
-    ]
-      .filter(Boolean)
-      .join(' ')
+    isYouTube
+      ? 'allow-scripts allow-same-origin allow-presentation allow-popups allow-popups-to-escape-sandbox'
+      : [
+          'allow-scripts',
+          trusted && 'allow-same-origin',
+          allowForms && 'allow-forms',
+        ]
+          .filter(Boolean)
+          .join(' ')
   );
 
   // Only allow http(s) sources — blocks javascript:, data:, blob:, etc.
@@ -50,8 +60,13 @@
     }
   });
 
-  // Minimal feature policy — nothing sensitive is delegated to the frame.
-  const allow = 'fullscreen';
+  // Feature policy. YouTube needs autoplay/encrypted-media/fullscreen to play;
+  // everything else gets only fullscreen.
+  const allow = $derived(
+    isYouTube
+      ? 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; fullscreen'
+      : 'fullscreen'
+  );
 </script>
 
 <div
@@ -84,7 +99,8 @@
       {title}
       {sandbox}
       {allow}
-      referrerpolicy="no-referrer"
+      referrerpolicy={isYouTube ? 'strict-origin-when-cross-origin' : 'no-referrer'}
+      allowfullscreen
       loading="lazy"
       onload={() => (loaded = true)}
       onerror={() => (failed = true)}

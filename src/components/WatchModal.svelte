@@ -9,7 +9,8 @@
   const embedSrc = $derived(
     'https://www.youtube-nocookie.com/embed/' +
       videoId +
-      '?autoplay=1&playsinline=1&rel=0'
+      '?autoplay=1&playsinline=1&rel=0&origin=' +
+      encodeURIComponent(location.origin)
   );
 
   // Tap anywhere on the dimmed backdrop → close (and the {#if} unmount
