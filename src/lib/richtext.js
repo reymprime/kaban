@@ -34,6 +34,79 @@ export function stripForSearch(s = '') {
   return s.replace(/<[^>]*>/g, ' ');
 }
 
+// ---- Auto-linking (read mode only) ------------------------------------
+// Turns raw URLs typed inside a note into clickable links, WITHOUT touching
+// URLs that are already inside an <a>, or text inside tags/attributes.
+// Applied at render time only — the stored note stays plain, so editing and
+// re-saving never double-wraps.
+//
+// Matches: https://…, http://…, www.…, and bare domains like example.io
+// (common TLDs only, to avoid turning "file.js" or "v1.2" into a link).
+const URL_RE =
+  /(?<![@\w])((?:https?:\/\/|www\.)[^\s<>"']+|(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+(?:com|net|org|io|ph|edu|gov|co|dev|app|ai|me|info|biz|tv|xyz|site|online|tech|store|blog|news)(?:\/[^\s<>"']*)?)/gi;
+
+// Trailing punctuation that is almost never part of the URL itself
+function splitTrailing(url) {
+  const m = url.match(/[),.!?;:'"\]]+$/);
+  if (!m) return [url, ''];
+  // Keep a closing paren if the URL actually contains an opening one (wiki links)
+  let trail = m[0];
+  if (trail.includes(')') && (url.match(/\(/g) || []).length >= (url.match(/\)/g) || []).length) {
+    trail = trail.replace(/\)+$/, '');
+  }
+  return [url.slice(0, url.length - trail.length), url.slice(url.length - trail.length)];
+}
+
+function anchorFor(raw) {
+  const [clean, trail] = splitTrailing(raw);
+  const href = /^https?:\/\//i.test(clean) ? clean : 'https://' + clean;
+  const safeText = escapeHtml(clean);
+  const safeHref = escapeHtml(href);
+  return (
+    `<a href="${safeHref}" class="note-link" data-note-link ` +
+    `target="_blank" rel="noopener noreferrer nofollow">${safeText}</a>` +
+    escapeHtml(trail)
+  );
+}
+
+// Walks text nodes only, so existing markup/formatting is preserved.
+export function linkifyHtml(html = '') {
+  const tpl = document.createElement('template');
+  tpl.innerHTML = html;
+
+  const walker = document.createTreeWalker(
+    tpl.content,
+    NodeFilter.SHOW_TEXT,
+    {
+      acceptNode(node) {
+        // Skip anything already inside a link
+        for (let p = node.parentNode; p && p !== tpl.content; p = p.parentNode) {
+          if (p.nodeName === 'A') return NodeFilter.FILTER_REJECT;
+        }
+        URL_RE.lastIndex = 0;
+        return URL_RE.test(node.nodeValue)
+          ? NodeFilter.FILTER_ACCEPT
+          : NodeFilter.FILTER_SKIP;
+      },
+    }
+  );
+
+  const targets = [];
+  let n;
+  while ((n = walker.nextNode())) targets.push(n);
+
+  for (const node of targets) {
+    URL_RE.lastIndex = 0;
+    const replaced = escapeHtml(node.nodeValue).replace(URL_RE, (m) => anchorFor(m));
+    if (replaced !== escapeHtml(node.nodeValue)) {
+      const span = document.createElement('template');
+      span.innerHTML = replaced;
+      node.replaceWith(span.content);
+    }
+  }
+  return tpl.innerHTML;
+}
+
 // Sanitizer: keeps only formatting tags and safe style properties.
 // Protects against scripts inside imported/shared JSON files.
 const ALLOWED = new Set([

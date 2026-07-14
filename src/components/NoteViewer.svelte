@@ -4,7 +4,7 @@
   import * as db from '../lib/db.js';
   import { vault, copyText, saveItem, setNoteLink, toast } from '../lib/store.svelte.js';
   import { detectPlatform } from '../lib/platform.js';
-  import { isHtml, textToHtml, htmlToText, sanitizeHtml } from '../lib/richtext.js';
+  import { isHtml, textToHtml, htmlToText, sanitizeHtml, linkifyHtml } from '../lib/richtext.js';
   import FormatBar from './FormatBar.svelte';
 
   let { item, onclose, autoEdit = false } = $props();
@@ -160,6 +160,14 @@
     toast('Changes saved ✓');
   }
 
+  // Open auto-detected links inside a note in the external browser
+  function handleNoteClick(e) {
+    const a = e.target.closest('a[data-note-link]');
+    if (!a) return;
+    e.preventDefault();
+    window.open(a.href, '_blank', 'noopener,noreferrer');
+  }
+
   async function handleCopy() {
     const ok = await copyText(htmlToText(current.content));
     toast(ok ? 'Copied to clipboard ✓' : 'Copy failed — try again');
@@ -241,13 +249,21 @@
         <div class="mb-4"></div>
       {/if}
       {#if isHtml(current.content)}
-        <div class="note-body text-[15px] leading-relaxed text-ink">
-          {@html sanitizeHtml(current.content)}
+        <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
+        <div
+          class="note-body text-[15px] leading-relaxed text-ink"
+          onclick={handleNoteClick}
+        >
+          {@html linkifyHtml(sanitizeHtml(current.content))}
         </div>
       {:else}
-        <p class="whitespace-pre-wrap text-[15px] leading-relaxed text-ink">
-          {current.content}
-        </p>
+        <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
+        <div
+          class="note-body whitespace-pre-wrap text-[15px] leading-relaxed text-ink"
+          onclick={handleNoteClick}
+        >
+          {@html linkifyHtml(textToHtml(current.content))}
+        </div>
       {/if}
     </div>
 

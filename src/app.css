@@ -213,6 +213,21 @@ textarea {
   font-size: 26px;
 }
 
+/* Auto-detected clickable links inside notes */
+.note-body .note-link {
+  color: var(--color-teal);
+  font-weight: 600;
+  text-decoration: underline;
+  text-decoration-color: color-mix(in srgb, var(--color-teal) 45%, transparent);
+  text-underline-offset: 2px;
+  word-break: break-all;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+.note-body .note-link:active {
+  opacity: 0.7;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .pop-in,
   .slide-in-right,
