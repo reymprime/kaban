@@ -1,6 +1,7 @@
 <script>
   import { lockScroll } from '../lib/scrollLock.js';
   import { vault, saveSettings, tapFeedback } from '../lib/store.svelte.js';
+  import ShieldDashboard from './ShieldDashboard.svelte';
 
   let { onclose } = $props();
 
@@ -54,6 +55,11 @@
           <path d="M18 6 6 18M6 6l12 12" />
         </svg>
       </button>
+    </div>
+
+    <!-- Privacy Shield -->
+    <div class="mb-5">
+      <ShieldDashboard {tapFeedback} />
     </div>
 
     <!-- Haptic feedback -->

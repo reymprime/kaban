@@ -1,10 +1,16 @@
 <script>
   import { lockScroll } from '../lib/scrollLock.js';
   import { getYouTubeId } from '../lib/platform.js';
+  import SafeEmbed from './SafeEmbed.svelte';
 
   let { item, onclose } = $props();
 
   const videoId = $derived(getYouTubeId(item.content));
+  const embedSrc = $derived(
+    'https://www.youtube-nocookie.com/embed/' +
+      videoId +
+      '?autoplay=1&playsinline=1&rel=0'
+  );
 
   // Tap anywhere on the dimmed backdrop → close (and the {#if} unmount
   // destroys the iframe, which fully stops playback + audio)
@@ -50,17 +56,16 @@
       </button>
     </div>
 
-    <!-- Strict 16:9, full width, fully responsive; corners inherit the
-         card's rounded overflow-hidden container -->
-    <div class="w-full bg-black" style="aspect-ratio: 16 / 9;">
-      <iframe
-        class="h-full w-full"
-        src={'https://www.youtube-nocookie.com/embed/' + videoId + '?autoplay=1&playsinline=1&rel=0'}
+    <!-- Strict 16:9, full width, fully responsive. SafeEmbed enforces the
+         sandbox (no popups/downloads) while letting the player run. -->
+    <div class="w-full bg-black">
+      <SafeEmbed
+        src={embedSrc}
         title={item.title}
-        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-        allowfullscreen
-        referrerpolicy="strict-origin-when-cross-origin"
-      ></iframe>
+        preset="youtube"
+        ratio="16 / 9"
+        class="rounded-none border-0"
+      />
     </div>
   </div>
 </div>
