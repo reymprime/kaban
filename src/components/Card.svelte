@@ -1,8 +1,9 @@
 <script>
   import { CATEGORIES } from '../lib/categories.js';
-  import { detectPlatform, normalizeUrl, getYouTubeId } from '../lib/platform.js';
+  import { detectPlatform, normalizeUrl, getYouTubeId, assessLinkRisk } from '../lib/platform.js';
   import { vault, copyText, togglePin, toggleLock, setProtection, toast } from '../lib/store.svelte.js';
   import { htmlToText } from '../lib/richtext.js';
+  import LinkWarningModal from './LinkWarningModal.svelte';
 
   let {
     item,
@@ -108,6 +109,32 @@
       return promptUnlock();
     }
     onviewnote?.(n);
+  }
+
+  // ---- Safe link opening ----
+  // Normal links open straight to the browser. Only flagged (scam/ad-farm)
+  // links show a warning first, so students aren't interrupted needlessly.
+  let linkWarning = $state(null); // { url, host, reasons } | null
+
+  function openLink() {
+    const target = normalizeUrl(contentText);
+    if (!target) return;
+    const risk = assessLinkRisk(target);
+    if (risk.suspicious) {
+      linkWarning = {
+        url: target,
+        host: (detectPlatform(contentText)?.host) || target,
+        reasons: risk.reasons,
+      };
+      return;
+    }
+    window.open(target, '_blank', 'noopener,noreferrer');
+  }
+
+  function proceedToLink() {
+    const target = linkWarning?.url;
+    linkWarning = null;
+    if (target) window.open(target, '_blank', 'noopener,noreferrer');
   }
 
   function notePreview(n) {
@@ -353,17 +380,15 @@
       </button>
     {:else}
     {#if item.type === 'link'}
-      <a
+      <button
         class="flex flex-1 items-center justify-center gap-1.5 py-2.5 text-[13px] font-semibold text-cat-link transition-colors active:bg-paper"
-        href={normalizeUrl(contentText)}
-        target="_blank"
-        rel="noopener noreferrer"
+        onclick={openLink}
       >
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6M15 3h6v6M10 14 21 3" />
         </svg>
         Open
-      </a>
+      </button>
       <div class="h-6 w-px bg-line"></div>
       {#if ytId}
         <!-- Watch (YouTube links only) -->
@@ -500,5 +525,15 @@
         </p>
       {/if}
     </div>
+  {/if}
+
+  {#if linkWarning}
+    <LinkWarningModal
+      url={linkWarning.url}
+      host={linkWarning.host}
+      reasons={linkWarning.reasons}
+      onproceed={proceedToLink}
+      oncancel={() => (linkWarning = null)}
+    />
   {/if}
 </li>
