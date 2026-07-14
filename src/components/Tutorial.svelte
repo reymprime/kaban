@@ -43,6 +43,24 @@
     },
     {
       center: true,
+      title: 'Links come alive in Notes',
+      text: 'Paste any web address inside a note and it becomes a tappable link automatically — perfect for keeping your research sources right beside your writing.',
+      btn: 'Nice',
+    },
+    {
+      center: true,
+      title: 'A heads-up on risky links',
+      text: 'Open a saved link and Kaban quietly checks it first. Trusted sites open instantly; only links with scam or ad-farm warning signs pause to ask you first.',
+      btn: 'Good to know',
+    },
+    {
+      center: true,
+      title: 'Your Privacy Shield',
+      text: 'Open Settings to find the Privacy Shield — it blocks third-party trackers to protect your privacy and save mobile data. Toggle it off anytime a research site needs it.',
+      btn: 'Got it',
+    },
+    {
+      center: true,
       title: 'One more power move',
       text: 'Long-press any card to select several at once — then Share them, Move them to folders, or Re-Order your vault.',
       btn: 'Got it',
@@ -95,6 +113,12 @@
   }
 
   const step = $derived(steps[idx]);
+  // Progress counter reflects only spotlight (targeted) steps, so adding or
+  // removing centered info cards never breaks the "X of Y" numbering.
+  const spotlightTotal = steps.filter((s) => s.target).length;
+  const spotlightIndex = $derived(
+    steps.slice(0, idx + 1).filter((s) => s.target).length
+  );
   // Tooltip goes below the target unless the target sits in the lower half
   const below = $derived(rect ? rect.y + rect.h / 2 < window.innerHeight / 2 : true);
 </script>
@@ -117,7 +141,7 @@
         : `bottom: ${window.innerHeight - rect.y + 20}px;`}
     >
       <p class="mb-0.5 text-[11px] font-semibold uppercase tracking-widest text-teal">
-        {idx} of {steps.length - 2}
+        {spotlightIndex} of {spotlightTotal}
       </p>
       <h3 class="mb-1 font-display text-[16px] font-bold">{step.title}</h3>
       <p class="mb-3 text-[13px] leading-relaxed text-ink-soft">{step.text}</p>
