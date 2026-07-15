@@ -2,6 +2,8 @@
   import { lockScroll } from '../lib/scrollLock.js';
   import { CATEGORIES } from '../lib/categories.js';
   import { vault, saveItem, toast } from '../lib/store.svelte.js';
+  import { MOODS } from '../lib/moods.js';
+  import MoodIcon from './MoodIcon.svelte';
 
   let { item, onclose, onsaved } = $props();
 
@@ -18,7 +20,6 @@
   const todayISO = new Date().toLocaleDateString('en-CA'); // YYYY-MM-DD, local
   let entryDate = $state(item.entryDate || todayISO);
   let mood = $state(item.mood || '');
-  const MOODS = ['😊', '😌', '😐', '😔', '😤', '😢', '🥳', '😴'];
 
   // Goal-specific: required target date + how progress is tracked.
   let targetDate = $state(item.targetDate || '');
@@ -196,15 +197,17 @@
               How are you feeling? <span class="font-normal">(optional)</span>
             </span>
             <div class="flex flex-wrap gap-2">
-              {#each MOODS as m}
+              {#each MOODS as m (m.id)}
                 <button
                   type="button"
-                  class="flex h-10 w-10 items-center justify-center rounded-xl border text-[20px] transition-all active:scale-90
-                    {mood === m ? 'border-transparent' : 'border-line'}"
-                  style={mood === m ? 'background: var(--color-cat-diary-soft);' : ''}
-                  onclick={() => (mood = mood === m ? '' : m)}
+                  class="flex h-12 w-12 flex-col items-center justify-center gap-0.5 rounded-xl border transition-all active:scale-90"
+                  style={mood === m.id
+                    ? `border-color: ${m.color}; background: ${m.color}14;`
+                    : 'border-color: var(--color-line);'}
+                  onclick={() => (mood = mood === m.id ? '' : m.id)}
+                  aria-label={m.label}
                 >
-                  {m}
+                  <MoodIcon mood={m.id} size={26} color={mood === m.id ? m.color : 'var(--color-ink-soft)'} />
                 </button>
               {/each}
             </div>

@@ -5,6 +5,8 @@
   import { htmlToText } from '../lib/richtext.js';
   import { goalProgress, deadlineLabel, deadlineTone } from '../lib/goals.js';
   import { taskProgress, taskCounts } from '../lib/tasks.js';
+  import { moodById } from '../lib/moods.js';
+  import MoodIcon from './MoodIcon.svelte';
   import LinkWarningModal from './LinkWarningModal.svelte';
 
   let {
@@ -384,7 +386,12 @@
       <button class="block w-full text-left" onclick={onview} aria-label="Open diary entry full screen">
         {#if diaryDate || item.mood}
           <div class="mb-1.5 flex items-center gap-2">
-            {#if item.mood}<span class="text-[18px] leading-none">{item.mood}</span>{/if}
+            {#if item.mood}
+              {@const mo = moodById(item.mood)}
+              {#if mo}
+                <MoodIcon mood={mo.id} size={18} color={mo.color} />
+              {/if}
+            {/if}
             {#if diaryDate}
               <span class="rounded-md px-1.5 py-0.5 text-[11px] font-semibold" style="background: var(--color-cat-diary-soft); color: var(--color-cat-diary);">
                 {diaryDate}
