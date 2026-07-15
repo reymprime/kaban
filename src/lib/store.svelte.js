@@ -520,6 +520,14 @@ export async function saveItem(data) {
         : existing
           ? existing.status || 'active'
           : 'active',
+    // Task list field — array of { id, text, done, priority, due }.
+    // priority: 1 (P1/urgent) | 2 (P2/soon) | 3 (P3/someday); due: YYYY-MM-DD|null
+    tasks:
+      data.tasks !== undefined
+        ? [...data.tasks]
+        : existing
+          ? existing.tasks || []
+          : [],
     // Preserve folder when caller (e.g. NoteViewer) doesn't send folderId
     folderId:
       data.folderId !== undefined

@@ -4,6 +4,7 @@
   import { vault, copyText, togglePin, toggleLock, setProtection, toast } from '../lib/store.svelte.js';
   import { htmlToText } from '../lib/richtext.js';
   import { goalProgress, deadlineLabel, deadlineTone } from '../lib/goals.js';
+  import { taskProgress, taskCounts } from '../lib/tasks.js';
   import LinkWarningModal from './LinkWarningModal.svelte';
 
   let {
@@ -171,6 +172,11 @@
         ? '#d97706'
         : 'var(--color-ink-soft)'
   );
+
+  // Task list card values
+  const taskPct = $derived(item.type === 'task' ? taskProgress(item.tasks || []) : 0);
+  const taskC = $derived(item.type === 'task' ? taskCounts(item.tasks || []) : { done: 0, total: 0, left: 0 });
+  const taskAllDone = $derived(item.type === 'task' && taskC.total > 0 && taskC.left === 0);
 
   // Lock icon animation — re-keyed to replay CSS animation each press
   let anim = $state({ n: 0, type: '' });
@@ -413,6 +419,26 @@
           <p class="mt-2 text-[12px] text-ink-soft">
             {item.milestones.filter((m) => m.done).length}/{item.milestones.length} milestones done
           </p>
+        {/if}
+      </button>
+    {:else if item.type === 'task'}
+      <button class="block w-full text-left" onclick={onview} aria-label="Open task list">
+        {#if taskC.total}
+          <div class="mb-2 flex items-center justify-between">
+            <span class="text-[13px] font-semibold" style="color: var(--color-cat-task);">
+              {taskC.done}/{taskC.total} done
+            </span>
+            {#if taskAllDone}
+              <span class="rounded-full px-2 py-0.5 text-[11px] font-bold text-white" style="background: var(--color-cat-task);">All clear 🎉</span>
+            {:else}
+              <span class="text-[12px] text-ink-soft">{taskC.left} left</span>
+            {/if}
+          </div>
+          <div class="h-2.5 overflow-hidden rounded-full bg-paper">
+            <div class="h-full rounded-full transition-all duration-500" style="width: {taskPct}%; background: linear-gradient(90deg, var(--color-cat-task), #22d3ee);"></div>
+          </div>
+        {:else}
+          <p class="text-[13px] text-ink-soft">Empty list — tap to add tasks</p>
         {/if}
       </button>
     {:else}

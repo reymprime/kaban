@@ -10,6 +10,7 @@
   import BackupModal from './components/BackupModal.svelte';
   import NoteViewer from './components/NoteViewer.svelte';
   import GoalView from './components/GoalView.svelte';
+  import TaskListView from './components/TaskListView.svelte';
   import WatchModal from './components/WatchModal.svelte';
   import FolderModal from './components/FolderModal.svelte';
   import SecurityModal from './components/SecurityModal.svelte';
@@ -36,6 +37,7 @@
   let deleting = $state(null); // item pending delete confirmation
   let viewing = $state(null); // note being viewed full screen
   let goalViewing = $state(null); // goal being viewed full screen
+  let taskViewing = $state(null); // task list being viewed full screen
   let watching = $state(null); // YouTube link playing in the Watch modal
   let viewAutoEdit = $state(false); // open the viewer straight into edit mode
   let showBackup = $state(false);
@@ -405,12 +407,11 @@
               to create your first goal.
             </p>
           {:else}
-            <p class="font-display text-lg font-semibold">
-              Your Tasks
-              <span class="ml-1.5 align-middle text-[11px] font-semibold uppercase tracking-wide text-teal">Soon</span>
-            </p>
+            <p class="font-display text-lg font-semibold">Your Tasks</p>
             <p class="max-w-[260px] text-sm text-ink-soft">
-              Simple checklists to stay on top of your day — arriving in the next update.
+              Organize what needs doing with priorities and due dates. Tap
+              <span class="font-semibold" style="color: var(--color-cat-task);">+</span>
+              to create your first task list.
             </p>
           {/if}
         {:else}
@@ -436,6 +437,8 @@
             onview={() => {
               if (item.type === 'goal') {
                 goalViewing = item;
+              } else if (item.type === 'task') {
+                taskViewing = item;
               } else {
                 viewing = item.protected
                   ? { ...item, tags: [...item.tags], content: vault.plain[item.id] ?? '' }
@@ -462,8 +465,8 @@
   <!-- FAB + menu -->
   {#if reordering}
     <!-- Reorder mode has its own Save/Cancel bar -->
-  {:else if !selecting && (world !== 'journey' || tab === 'diary' || tab === 'goal')}
-    <!-- Journey: Diary and Goals have editors now; Tasks arrives next phase. -->
+  {:else if !selecting}
+    <!-- All Journey tabs (Diary, Goals, Tasks) now have editors. -->
     {#if showFabMenu}
       <button
         class="fixed inset-0 z-30 bg-ink/20"
@@ -523,6 +526,8 @@
           editing = { type: 'diary' };
         } else if (world === 'journey' && tab === 'goal') {
           editing = { type: 'goal' };
+        } else if (world === 'journey' && tab === 'task') {
+          editing = { type: 'task' };
         } else {
           showFabMenu = !showFabMenu;
         }
@@ -662,6 +667,13 @@
       onsaved={(saved) => (goalViewing = saved)}
     />
   {/if}
+  {#if taskViewing}
+    <TaskListView
+      item={taskViewing}
+      onclose={() => (taskViewing = null)}
+      onsaved={(saved) => (taskViewing = saved)}
+    />
+  {/if}
   {#if watching}
     <WatchModal item={watching} onclose={() => (watching = null)} />
   {/if}
@@ -675,6 +687,8 @@
           viewAutoEdit = true;
         } else if (wasNew && saved.type === 'goal') {
           goalViewing = saved;
+        } else if (wasNew && saved.type === 'task') {
+          taskViewing = saved;
         }
       }}
     />

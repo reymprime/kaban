@@ -27,10 +27,11 @@
   const isLink = $derived(type === 'link');
   const isDiary = $derived(type === 'diary');
   const isGoal = $derived(type === 'goal');
-  // Diary and goal reuse the note flow: details are set here, the body/steps
-  // are handled in the full-screen view after saving.
+  const isTask = $derived(type === 'task');
+  // Diary, goal, and task reuse the note flow: details are set here, the
+  // body/steps/items are handled in the full-screen view after saving.
   const writesInFullScreen = $derived(
-    type === 'note' || type === 'diary' || type === 'goal'
+    type === 'note' || type === 'diary' || type === 'goal' || type === 'task'
   );
   const folderOptions = $derived(
     vault.folders
@@ -113,14 +114,16 @@
            Goal/Task editors arrive in later phases, so they're not offered yet;
            diary opens straight from its own tab with the type pre-set. -->
       {#if isNew}
-        {#if isDiary || isGoal}
-          {@const cd = isDiary ? 'diary' : 'goal'}
+        {#if isDiary || isGoal || isTask}
+          {@const cd = isDiary ? 'diary' : isGoal ? 'goal' : 'task'}
+          {@const cl = isDiary ? 'Diary' : isGoal ? 'Goal' : 'Task List'}
+          {@const sub = isDiary ? 'New diary entry' : isGoal ? 'New goal' : 'New task list'}
           <div class="mb-4 flex items-center gap-2.5 rounded-xl px-3.5 py-2.5" style="background: var(--color-cat-{cd}-soft);">
             <span class="rounded-md px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide" style="background: var(--color-cat-{cd}); color: #fff;">
-              {isDiary ? 'Diary' : 'Goal'}
+              {cl}
             </span>
             <p class="text-[12px]" style="color: var(--color-cat-{cd});">
-              {isDiary ? 'New diary entry' : 'New goal'}
+              {sub}
             </p>
           </div>
         {:else}
@@ -255,15 +258,17 @@
 
       {#if writesInFullScreen}
         <div class="mb-4 flex items-center gap-2 rounded-xl bg-paper px-3.5 py-2.5">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={isDiary ? 'var(--color-cat-diary)' : isGoal ? 'var(--color-cat-goal)' : 'var(--color-cat-note)'} stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="shrink-0">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={isDiary ? 'var(--color-cat-diary)' : isGoal ? 'var(--color-cat-goal)' : isTask ? 'var(--color-cat-task)' : 'var(--color-cat-note)'} stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="shrink-0">
             <path d="M17 3a2.8 2.8 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3Z" />
           </svg>
           <p class="text-[12px] text-ink-soft">
-            {isGoal
-              ? "You'll set your progress and milestones after saving."
-              : isDiary
-                ? "You'll write your entry in the full-screen editor after saving."
-                : "You'll write the note in the full-screen editor after saving."}
+            {isTask
+              ? "You'll add your tasks after saving."
+              : isGoal
+                ? "You'll set your progress and milestones after saving."
+                : isDiary
+                  ? "You'll write your entry in the full-screen editor after saving."
+                  : "You'll write the note in the full-screen editor after saving."}
           </p>
         </div>
       {:else}
