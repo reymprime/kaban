@@ -1,7 +1,7 @@
 <script>
   import { onMount } from 'svelte';
   import { vault, loadVault, shareItems, moveToFolder, reorderItems, tapFeedback, toast } from './lib/store.svelte.js';
-  import { TABS, CATEGORIES } from './lib/categories.js';
+  import { TABS, TABS_BY_WORLD, WORLDS, WORLD_OF_TAB, CATEGORIES } from './lib/categories.js';
   import { stripForSearch } from './lib/richtext.js';
   import Header from './components/Header.svelte';
   import Card from './components/Card.svelte';
@@ -19,7 +19,17 @@
   import Tutorial from './components/Tutorial.svelte';
   import Toast from './components/Toast.svelte';
 
+  let world = $state('vault'); // 'vault' | 'journey'
   let tab = $state('all');
+
+  // Switch worlds and land on that world's first tab.
+  function setWorld(w) {
+    if (world === w) return;
+    world = w;
+    tab = TABS_BY_WORLD[w][0].id;
+    openFolder = null; // leaving folder view when switching worlds
+  }
+  const worldTabs = $derived(TABS_BY_WORLD[world]);
   let query = $state('');
   let editing = $state(null); // item object (edit) or { type } (new)
   let deleting = $state(null); // item pending delete confirmation
@@ -135,7 +145,13 @@
 
   const filtered = $derived.by(() => {
     const q = query.trim().toLowerCase();
-    let list = vault.items;
+    const journeyTypes = TABS_BY_WORLD.journey.map((t) => t.id); // diary, goal, task
+    const inWorld = (i) =>
+      world === 'journey'
+        ? journeyTypes.includes(i.type)
+        : !journeyTypes.includes(i.type);
+
+    let list = vault.items.filter(inWorld); // keep the two worlds separate
     if (openFolder) {
       list = list.filter((i) => i.folderId === openFolder.id);
     } else if (tab === 'folder') {
@@ -143,7 +159,7 @@
       return [];
     } else {
       // Cards inside folders live ONLY inside their folder while browsing.
-      // Search stays global so nothing ever feels lost.
+      // Search stays global (within the world) so nothing ever feels lost.
       if (!q) list = list.filter((i) => !i.folderId);
       if (tab !== 'all') list = list.filter((i) => i.type === tab);
     }
@@ -188,12 +204,18 @@
     f.category === 'all' ? 'var(--color-teal)' : CATEGORIES[f.category]?.color;
 
   const counts = $derived.by(() => {
+    const journeyTypes = TABS_BY_WORLD.journey.map((t) => t.id);
     const c = {
-      all: vault.items.length,
+      // 'All' lives in Vault, so it counts Vault items only — Journey entries
+      // (diary/goal/task) have their own tabs and stay out of this total.
+      all: vault.items.filter((i) => !journeyTypes.includes(i.type)).length,
       image: 0,
       video: 0,
       link: 0,
       note: 0,
+      diary: 0,
+      goal: 0,
+      task: 0,
       folder: vault.folders.length,
     };
     for (const i of vault.items) c[i.type] = (c[i.type] || 0) + 1;
@@ -253,12 +275,27 @@
         </button>
       </div>
     {:else}
+      <!-- World switcher: Vault (collect) ↔ Journey (grow) -->
+      <div class="mb-2.5 px-4">
+        <div class="flex gap-1 rounded-2xl border border-line bg-paper p-1">
+          {#each WORLDS as w (w.id)}
+            <button
+              class="flex-1 rounded-xl py-2 text-[13px] font-semibold transition-all active:scale-[0.98]
+                {world === w.id ? 'bg-card text-ink shadow-sm' : 'text-ink-soft'}"
+              onclick={() => setWorld(w.id)}
+            >
+              {w.label}
+            </button>
+          {/each}
+        </div>
+      </div>
+
       <nav
         id="tour-tabs"
         class="no-scrollbar flex gap-2 overflow-x-auto px-4 pb-3"
         aria-label="Categories"
       >
-        {#each TABS as t (t.id)}
+        {#each worldTabs as t (t.id)}
           <button
             class="shrink-0 rounded-full border px-3.5 py-1.5 text-[13px] font-medium transition-colors
               {tab === t.id
@@ -350,13 +387,19 @@
           <p class="max-w-[240px] text-sm text-ink-soft">
             No cards here yet — tap <span class="font-semibold text-teal">+</span> to add one.
           </p>
-        {:else}
-          <p class="font-display text-lg font-semibold">Your kaban is empty</p>
-          <p class="max-w-[240px] text-sm text-ink-soft">
-            Tap <span class="font-semibold text-teal">+</span> to save your first
-            prompt, link, or note.
+        {:else if world === 'journey'}
+          <p class="font-display text-lg font-semibold">
+            {tab === 'diary' ? 'Your Diary' : tab === 'goal' ? 'Your Goals' : 'Your Tasks'}
+            <span class="ml-1.5 align-middle text-[11px] font-semibold uppercase tracking-wide text-teal">Soon</span>
           </p>
-        {/if}
+          <p class="max-w-[260px] text-sm text-ink-soft">
+            {tab === 'diary'
+              ? 'A private, encrypted space to reflect on your day — arriving in the next update.'
+              : tab === 'goal'
+                ? 'Set goals with progress and deadlines to track what matters — arriving in the next update.'
+                : 'Simple checklists to stay on top of your day — arriving in the next update.'}
+          </p>
+        {:else}
       </div>
     {:else}
       <ul class="card-grid">
@@ -394,7 +437,9 @@
   <!-- FAB + menu -->
   {#if reordering}
     <!-- Reorder mode has its own Save/Cancel bar -->
-  {:else if !selecting}
+  {:else if !selecting && world !== 'journey'}
+    <!-- Journey (Diary/Goals/Tasks) editors arrive in a later phase, so the
+         add button stays hidden there for now to avoid opening a missing editor. -->
     {#if showFabMenu}
       <button
         class="fixed inset-0 z-30 bg-ink/20"

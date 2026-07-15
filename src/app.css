@@ -20,6 +20,14 @@
   --color-cat-note: #d97706;
   --color-cat-note-soft: #fdf0dd;
 
+  /* Journey categories */
+  --color-cat-diary: #db2777;
+  --color-cat-diary-soft: #fce7f1;
+  --color-cat-goal: #059669;
+  --color-cat-goal-soft: #d9f5ea;
+  --color-cat-task: #0891b2;
+  --color-cat-task-soft: #d6f1f8;
+
   --font-display: 'Bricolage Grotesque', system-ui, sans-serif;
   --font-body: 'Inter', system-ui, sans-serif;
   --font-mono: 'IBM Plex Mono', ui-monospace, monospace;
@@ -48,6 +56,12 @@ html {
   --color-cat-link-soft: #17263d;
   --color-cat-note: #fbbf24;
   --color-cat-note-soft: #33280f;
+  --color-cat-diary: #f472b6;
+  --color-cat-diary-soft: #3a1526;
+  --color-cat-goal: #34d399;
+  --color-cat-goal-soft: #0f2e24;
+  --color-cat-task: #22d3ee;
+  --color-cat-task-soft: #0c2b33;
 }
 
 body {
