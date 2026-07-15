@@ -139,6 +139,10 @@
   }
 
   async function exitFocus() {
+    // Capture what's on screen BEFORE leaving the writer, so content is never
+    // lost if the user exits to read-mode and saves from there (mobile keyboards
+    // don't always fire oninput on every keystroke).
+    if (focusEl) htmlBody = focusEl.innerHTML;
     focusMode = false;
   }
 
@@ -441,6 +445,7 @@
         aria-multiline="true"
         aria-label="Note content"
         oninput={() => { htmlBody = focusEl.innerHTML; scheduleDraft(); }}
+        onblur={() => { if (focusEl) htmlBody = focusEl.innerHTML; }}
         class="rich-editor w-full flex-1 overflow-y-auto bg-card px-5 py-4 text-[16px] leading-relaxed focus:outline-none"
         style="padding-bottom: calc(1rem + env(safe-area-inset-bottom));"
       ></div>
