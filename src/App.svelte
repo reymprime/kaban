@@ -400,6 +400,12 @@
                 : 'Simple checklists to stay on top of your day — arriving in the next update.'}
           </p>
         {:else}
+          <p class="font-display text-lg font-semibold">Your kaban is empty</p>
+          <p class="max-w-[240px] text-sm text-ink-soft">
+            Tap <span class="font-semibold text-teal">+</span> to save your first
+            prompt, link, or note.
+          </p>
+        {/if}
       </div>
     {:else}
       <ul class="card-grid">
