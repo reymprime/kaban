@@ -471,6 +471,20 @@ export async function saveItem(data) {
     protected: isProtected,
     order: existing && typeof existing.order === 'number' ? existing.order : null,
     linkedTo: existing ? existing.linkedTo || null : null,
+    // Diary fields — kept for all types but only meaningful for 'diary'.
+    // entryDate = the day the entry is *about* (YYYY-MM-DD); mood = optional emoji.
+    entryDate:
+      data.entryDate !== undefined
+        ? data.entryDate || null
+        : existing
+          ? existing.entryDate || null
+          : null,
+    mood:
+      data.mood !== undefined
+        ? data.mood || null
+        : existing
+          ? existing.mood || null
+          : null,
     // Preserve folder when caller (e.g. NoteViewer) doesn't send folderId
     folderId:
       data.folderId !== undefined

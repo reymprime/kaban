@@ -388,17 +388,24 @@
             No cards here yet — tap <span class="font-semibold text-teal">+</span> to add one.
           </p>
         {:else if world === 'journey'}
-          <p class="font-display text-lg font-semibold">
-            {tab === 'diary' ? 'Your Diary' : tab === 'goal' ? 'Your Goals' : 'Your Tasks'}
-            <span class="ml-1.5 align-middle text-[11px] font-semibold uppercase tracking-wide text-teal">Soon</span>
-          </p>
-          <p class="max-w-[260px] text-sm text-ink-soft">
-            {tab === 'diary'
-              ? 'A private, encrypted space to reflect on your day — arriving in the next update.'
-              : tab === 'goal'
+          {#if tab === 'diary'}
+            <p class="font-display text-lg font-semibold">Your Diary</p>
+            <p class="max-w-[260px] text-sm text-ink-soft">
+              A private space to reflect on your day. Tap
+              <span class="font-semibold" style="color: var(--color-cat-diary);">+</span>
+              to write your first entry.
+            </p>
+          {:else}
+            <p class="font-display text-lg font-semibold">
+              {tab === 'goal' ? 'Your Goals' : 'Your Tasks'}
+              <span class="ml-1.5 align-middle text-[11px] font-semibold uppercase tracking-wide text-teal">Soon</span>
+            </p>
+            <p class="max-w-[260px] text-sm text-ink-soft">
+              {tab === 'goal'
                 ? 'Set goals with progress and deadlines to track what matters — arriving in the next update.'
                 : 'Simple checklists to stay on top of your day — arriving in the next update.'}
-          </p>
+            </p>
+          {/if}
         {:else}
           <p class="font-display text-lg font-semibold">Your kaban is empty</p>
           <p class="max-w-[240px] text-sm text-ink-soft">
@@ -443,9 +450,9 @@
   <!-- FAB + menu -->
   {#if reordering}
     <!-- Reorder mode has its own Save/Cancel bar -->
-  {:else if !selecting && world !== 'journey'}
-    <!-- Journey (Diary/Goals/Tasks) editors arrive in a later phase, so the
-         add button stays hidden there for now to avoid opening a missing editor. -->
+  {:else if !selecting && (world !== 'journey' || tab === 'diary')}
+    <!-- Journey: only Diary has an editor so far, so the add button appears
+         there; Goals/Tasks editors arrive in later phases. -->
     {#if showFabMenu}
       <button
         class="fixed inset-0 z-30 bg-ink/20"
@@ -499,8 +506,14 @@
       class="fab-right fixed bottom-6 z-30 flex h-14 w-14 items-center justify-center rounded-2xl bg-teal text-white shadow-lg shadow-teal/30 transition-transform active:scale-95"
       style="margin-bottom: env(safe-area-inset-bottom);"
       id="tour-fab"
-      aria-label={showFabMenu ? 'Close menu' : 'Add new'}
-      onclick={() => (showFabMenu = !showFabMenu)}
+      aria-label={world === 'journey' ? 'New diary entry' : showFabMenu ? 'Close menu' : 'Add new'}
+      onclick={() => {
+        if (world === 'journey' && tab === 'diary') {
+          editing = { type: 'diary' };
+        } else {
+          showFabMenu = !showFabMenu;
+        }
+      }}
     >
       <svg
         width="24"
@@ -637,7 +650,7 @@
       item={editing}
       onclose={() => (editing = null)}
       onsaved={(saved, wasNew) => {
-        if (wasNew && saved.type === 'note') {
+        if (wasNew && (saved.type === 'note' || saved.type === 'diary')) {
           viewing = saved;
           viewAutoEdit = true;
         }

@@ -145,6 +145,18 @@
   const copyBlocked = $derived(locked && item.type === 'link');
   // Rich notes are stored as HTML — preview and copy use plain text
   const noteText = $derived(item.type === 'note' ? htmlToText(contentText) : '');
+  const diaryText = $derived(item.type === 'diary' ? htmlToText(contentText) : '');
+  // Friendly entry date like "Mon, Jul 14"
+  const diaryDate = $derived.by(() => {
+    if (item.type !== 'diary' || !item.entryDate) return '';
+    const d = new Date(item.entryDate + 'T00:00:00');
+    if (isNaN(d)) return '';
+    return d.toLocaleDateString(undefined, {
+      weekday: 'short',
+      month: 'short',
+      day: 'numeric',
+    });
+  });
 
   // Lock icon animation — re-keyed to replay CSS animation each press
   let anim = $state({ n: 0, type: '' });
@@ -343,6 +355,28 @@
         </p>
         <span class="mt-1 inline-flex items-center gap-1 text-[12px] font-semibold text-cat-note">
           Read full note
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M5 12h14m-6-6 6 6-6 6" />
+          </svg>
+        </span>
+      </button>
+    {:else if item.type === 'diary'}
+      <button class="block w-full text-left" onclick={onview} aria-label="Open diary entry full screen">
+        {#if diaryDate || item.mood}
+          <div class="mb-1.5 flex items-center gap-2">
+            {#if item.mood}<span class="text-[18px] leading-none">{item.mood}</span>{/if}
+            {#if diaryDate}
+              <span class="rounded-md px-1.5 py-0.5 text-[11px] font-semibold" style="background: var(--color-cat-diary-soft); color: var(--color-cat-diary);">
+                {diaryDate}
+              </span>
+            {/if}
+          </div>
+        {/if}
+        <p class="clamp-3 whitespace-pre-wrap text-[13px] leading-relaxed text-ink-soft">
+          {diaryText || 'Empty entry — tap to write'}
+        </p>
+        <span class="mt-1 inline-flex items-center gap-1 text-[12px] font-semibold" style="color: var(--color-cat-diary);">
+          Open entry
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
             <path d="M5 12h14m-6-6 6 6-6 6" />
           </svg>

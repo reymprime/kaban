@@ -14,7 +14,16 @@
   let folderId = $state(item.folderId || '');
   let saving = $state(false);
 
+  // Diary-specific: entry date (defaults to today) and optional mood.
+  const todayISO = new Date().toLocaleDateString('en-CA'); // YYYY-MM-DD, local
+  let entryDate = $state(item.entryDate || todayISO);
+  let mood = $state(item.mood || '');
+  const MOODS = ['😊', '😌', '😐', '😔', '😤', '😢', '🥳', '😴'];
+
   const isLink = $derived(type === 'link');
+  const isDiary = $derived(type === 'diary');
+  // Diary reuses the note flow: content is written in the full-screen editor.
+  const writesInFullScreen = $derived(type === 'note' || type === 'diary');
   const folderOptions = $derived(
     vault.folders
       .filter((f) => f.category === type || f.category === 'all')
@@ -22,8 +31,8 @@
   );
 
   async function save() {
-    const isNote = type === 'note';
-    if (!isNote && !content.trim()) {
+    const skipContent = writesInFullScreen;
+    if (!skipContent && !content.trim()) {
       toast(isLink ? 'Paste a link first' : 'Content cannot be empty');
       return;
     }
@@ -39,10 +48,13 @@
       type,
       title,
       description,
-      // Notes are written in the full-screen editor; keep existing content here
-      content: isNote ? undefined : content,
+      // Notes and diary entries are written in the full-screen editor;
+      // keep existing content untouched here.
+      content: skipContent ? undefined : content,
       tags,
       folderId: validFolder,
+      entryDate: isDiary ? entryDate : undefined,
+      mood: isDiary ? mood || null : undefined,
     });
     saving = false;
     toast(isNew ? 'Saved to your kaban ✓' : 'Changes saved ✓');
@@ -83,21 +95,32 @@
     </div>
 
     <div class="flex-1 overflow-y-auto px-5 pb-2">
-      <!-- Type chips (create only — card type is permanent) -->
+      <!-- Type chips (create only — card type is permanent).
+           Goal/Task editors arrive in later phases, so they're not offered yet;
+           diary opens straight from its own tab with the type pre-set. -->
       {#if isNew}
-        <div class="mb-4 grid grid-cols-2 gap-2">
-          {#each Object.entries(CATEGORIES) as [key, cat] (key)}
-            <button
-              class="rounded-xl border px-3 py-2.5 text-[13px] font-semibold transition-colors"
-              style={type === key
-                ? `border-color: ${cat.color}; background: ${cat.soft}; color: ${cat.color};`
-                : 'border-color: var(--color-line); color: var(--color-ink-soft);'}
-              onclick={() => (type = key)}
-            >
-              {cat.label}
-            </button>
-          {/each}
-        </div>
+        {#if isDiary}
+          <div class="mb-4 flex items-center gap-2.5 rounded-xl px-3.5 py-2.5" style="background: var(--color-cat-diary-soft);">
+            <span class="rounded-md px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide" style="background: var(--color-cat-diary); color: #fff;">
+              Diary
+            </span>
+            <p class="text-[12px]" style="color: var(--color-cat-diary);">New diary entry</p>
+          </div>
+        {:else}
+          <div class="mb-4 grid grid-cols-2 gap-2">
+            {#each Object.entries(CATEGORIES).filter(([k]) => !['diary', 'goal', 'task'].includes(k)) as [key, cat] (key)}
+              <button
+                class="rounded-xl border px-3 py-2.5 text-[13px] font-semibold transition-colors"
+                style={type === key
+                  ? `border-color: ${cat.color}; background: ${cat.soft}; color: ${cat.color};`
+                  : 'border-color: var(--color-line); color: var(--color-ink-soft);'}
+                onclick={() => (type = key)}
+              >
+                {cat.label}
+              </button>
+            {/each}
+          </div>
+        {/if}
       {:else}
         <div class="mb-4 flex items-center gap-2.5 rounded-xl bg-paper px-3.5 py-2.5">
           <span
@@ -134,13 +157,48 @@
         class="mb-4 w-full rounded-xl border border-line bg-paper px-3.5 py-2.5 text-[14px] focus:border-teal focus:outline-none"
       />
 
-      {#if type === 'note'}
+      {#if isDiary}
+        <div class="mb-4 grid grid-cols-1 gap-4">
+          <div>
+            <label class="mb-1 block text-[12px] font-semibold text-ink-soft" for="kb-date">
+              Entry date
+            </label>
+            <input
+              id="kb-date"
+              type="date"
+              bind:value={entryDate}
+              max={todayISO}
+              class="w-full rounded-xl border border-line bg-paper px-3.5 py-2.5 text-[14px] focus:border-teal focus:outline-none"
+            />
+          </div>
+          <div>
+            <span class="mb-1.5 block text-[12px] font-semibold text-ink-soft">
+              How are you feeling? <span class="font-normal">(optional)</span>
+            </span>
+            <div class="flex flex-wrap gap-2">
+              {#each MOODS as m}
+                <button
+                  type="button"
+                  class="flex h-10 w-10 items-center justify-center rounded-xl border text-[20px] transition-all active:scale-90
+                    {mood === m ? 'border-transparent' : 'border-line'}"
+                  style={mood === m ? 'background: var(--color-cat-diary-soft);' : ''}
+                  onclick={() => (mood = mood === m ? '' : m)}
+                >
+                  {m}
+                </button>
+              {/each}
+            </div>
+          </div>
+        </div>
+      {/if}
+
+      {#if writesInFullScreen}
         <div class="mb-4 flex items-center gap-2 rounded-xl bg-paper px-3.5 py-2.5">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--color-cat-note)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="shrink-0">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={isDiary ? 'var(--color-cat-diary)' : 'var(--color-cat-note)'} stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="shrink-0">
             <path d="M17 3a2.8 2.8 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3Z" />
           </svg>
           <p class="text-[12px] text-ink-soft">
-            You'll write the note in the full-screen editor after saving.
+            You'll write {isDiary ? 'your entry' : 'the note'} in the full-screen editor after saving.
           </p>
         </div>
       {:else}
