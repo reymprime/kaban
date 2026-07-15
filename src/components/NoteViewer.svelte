@@ -27,7 +27,17 @@
 
   // ---- Link to (attach this note to a Stored Link) ----
   let showLinkPicker = $state(false);
+  let linkQuery = $state('');
   const storedLinks = $derived(vault.items.filter((i) => i.type === 'link'));
+  // Filter the picker by title or host as the user types.
+  const filteredLinks = $derived.by(() => {
+    const q = linkQuery.trim().toLowerCase();
+    if (!q) return storedLinks;
+    return storedLinks.filter((l) => {
+      const host = (linkHost(l) || '').toLowerCase();
+      return l.title.toLowerCase().includes(q) || host.includes(q);
+    });
+  });
 
   async function pickLink(linkId) {
     await setNoteLink(current.id, linkId);
@@ -394,7 +404,10 @@
             class="flex items-center gap-1 rounded-lg px-2 py-1.5 text-[12px] font-semibold active:bg-paper
               {current.linkedTo ? 'text-teal' : 'text-ink-soft'}"
             aria-label="Link this note to a Stored Link"
-            onclick={() => (showLinkPicker = true)}
+            onclick={() => {
+              linkQuery = '';
+              showLinkPicker = true;
+            }}
           >
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7" />
@@ -456,13 +469,37 @@
         <p class="px-5 pb-3 text-[12px] text-ink-soft">
           Attach this note as extra information to a Stored Link.
         </p>
+        {#if storedLinks.length > 4}
+          <div class="px-5 pb-3">
+            <div class="flex items-center gap-2 rounded-xl border border-line bg-paper px-3 py-2">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--color-ink-soft)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="shrink-0">
+                <circle cx="11" cy="11" r="7" /><path d="m21 21-4.3-4.3" />
+              </svg>
+              <input
+                type="text"
+                bind:value={linkQuery}
+                placeholder="Search links…"
+                class="w-full bg-transparent text-[14px] focus:outline-none"
+              />
+              {#if linkQuery}
+                <button class="shrink-0 text-ink-soft active:opacity-60" aria-label="Clear search" onclick={() => (linkQuery = '')}>
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12" /></svg>
+                </button>
+              {/if}
+            </div>
+          </div>
+        {/if}
         <div class="min-h-0 flex-1 overflow-y-auto px-3 pb-3">
           {#if !storedLinks.length}
             <p class="px-2 py-6 text-center text-[13px] text-ink-soft">
               No Stored Links yet — save a link first, then attach this note to it.
             </p>
+          {:else if !filteredLinks.length}
+            <p class="px-2 py-6 text-center text-[13px] text-ink-soft">
+              No links match “{linkQuery}”.
+            </p>
           {:else}
-            {#each storedLinks as l (l.id)}
+            {#each filteredLinks as l (l.id)}
               <button
                 class="flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left transition-colors active:bg-paper
                   {current.linkedTo === l.id ? 'bg-teal-soft/50' : ''}"
