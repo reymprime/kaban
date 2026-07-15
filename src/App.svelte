@@ -16,6 +16,7 @@
   import SecurityModal from './components/SecurityModal.svelte';
   import SettingsModal from './components/SettingsModal.svelte';
   import ReorderList from './components/ReorderList.svelte';
+  import FolderReorderList from './components/FolderReorderList.svelte';
   import FolderPickerModal from './components/FolderPickerModal.svelte';
   import RecapModal from './components/RecapModal.svelte';
   import Tutorial from './components/Tutorial.svelte';
@@ -54,6 +55,7 @@
   let sharing = $state(false);
   let showFolderPicker = $state(false);
   let reordering = $state(false);
+  let reorderingFolders = $state(false);
 
   const selectedTypes = $derived(
     vault.items.filter((i) => selected.includes(i.id)).map((i) => i.type)
@@ -81,6 +83,12 @@
     await reorderItems(orderedIds);
     reordering = false;
     toast('New order saved ✓');
+  }
+
+  async function saveFolderReorder(orderedIds) {
+    await reorderFolders(orderedIds);
+    reorderingFolders = false;
+    toast('Folder order saved ✓');
   }
 
   function startSelect(id) {
@@ -231,32 +239,6 @@
     return c;
   });
 
-  // Folder drag-to-reorder (hold a folder and drag to a new position)
-  let folderDragId = $state(null);
-  let folderOverId = $state(null);
-
-  function onFolderDragStart(id) {
-    folderDragId = id;
-    tapFeedback();
-  }
-  function onFolderDragEnter(id) {
-    if (folderDragId && id !== folderDragId) folderOverId = id;
-  }
-  async function onFolderDrop() {
-    if (folderDragId && folderOverId && folderDragId !== folderOverId) {
-      const ids = visibleFolders.map((f) => f.id);
-      const from = ids.indexOf(folderDragId);
-      const to = ids.indexOf(folderOverId);
-      if (from > -1 && to > -1) {
-        ids.splice(to, 0, ids.splice(from, 1)[0]);
-        await reorderFolders(ids);
-        tapFeedback();
-      }
-    }
-    folderDragId = null;
-    folderOverId = null;
-  }
-
   function newItem() {
     let type = tab === 'all' || tab === 'folder' ? 'image' : tab;
     let folderId;
@@ -353,7 +335,14 @@
 
   <!-- Card list -->
   <main class="flex-1 px-4 pb-32 pt-1">
-    {#if reordering}
+    {#if reorderingFolders}
+      <FolderReorderList
+        folders={visibleFolders}
+        counts={folderCounts}
+        onsave={saveFolderReorder}
+        oncancel={() => (reorderingFolders = false)}
+      />
+    {:else if reordering}
       <ReorderList
         items={filtered}
         onsave={saveReorder}
@@ -361,17 +350,20 @@
       />
     {:else}
     {#if visibleFolders.length}
+      {#if visibleFolders.length > 1 && !query}
+        <button
+          class="mb-3 flex items-center gap-1.5 text-[12px] font-semibold text-ink-soft active:opacity-70"
+          onclick={() => (reorderingFolders = true)}
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M8 6h13M8 12h13M8 18h13M3.5 6h.01M3.5 12h.01M3.5 18h.01" />
+          </svg>
+          Reorder folders
+        </button>
+      {/if}
       <ul class="folder-grid mb-3">
         {#each visibleFolders as f (f.id)}
-          <li
-            class="relative transition-opacity {folderDragId === f.id ? 'opacity-40' : ''} {folderOverId === f.id ? 'ring-2 ring-teal rounded-2xl' : ''}"
-            draggable="true"
-            ondragstart={() => onFolderDragStart(f.id)}
-            ondragenter={() => onFolderDragEnter(f.id)}
-            ondragover={(e) => e.preventDefault()}
-            ondrop={onFolderDrop}
-            ondragend={onFolderDrop}
-          >
+          <li class="relative">
             <button
               class="flex w-full items-center gap-3 rounded-2xl border border-line bg-card px-4 py-3 pr-12 text-left active:bg-paper"
               onclick={() => (openFolder = f)}
