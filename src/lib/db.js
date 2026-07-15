@@ -45,12 +45,24 @@ function reqGetAll(store) {
   );
 }
 
+// Svelte 5 $state values are Proxies, which IndexedDB cannot structured-clone
+// (it throws DataCloneError and the write silently fails). Strip the proxy to a
+// plain object before storing so every caller is safe.
+function toPlain(value) {
+  try {
+    return JSON.parse(JSON.stringify(value));
+  } catch {
+    return value;
+  }
+}
+
 function reqPut(store, value) {
+  const plain = toPlain(value);
   return openDB().then(
     (db) =>
       new Promise((resolve, reject) => {
-        const req = tx(db, store, 'readwrite').put(value);
-        req.onsuccess = () => resolve(value);
+        const req = tx(db, store, 'readwrite').put(plain);
+        req.onsuccess = () => resolve(plain);
         req.onerror = () => reject(req.error);
       })
   );
@@ -73,7 +85,7 @@ function reqBulkPut(store, values) {
       new Promise((resolve, reject) => {
         const t = db.transaction(store, 'readwrite');
         const s = t.objectStore(store);
-        for (const v of values) s.put(v);
+        for (const v of values) s.put(toPlain(v));
         t.oncomplete = () => resolve(values.length);
         t.onerror = () => reject(t.error);
       })
