@@ -143,6 +143,13 @@
   }
 
   async function save() {
+    // Read straight from the editor element when in full-screen writing mode.
+    // Some mobile keyboards/IME don't fire `oninput` on every keystroke, which
+    // could leave htmlBody stale — pulling from focusEl here guarantees we save
+    // exactly what's on screen.
+    if (focusMode && focusEl) {
+      htmlBody = focusEl.innerHTML;
+    }
     const plainTxt = htmlToText(htmlBody).trim();
     if (!plainTxt) {
       toast('Note cannot be empty');
@@ -160,6 +167,9 @@
       description,
       content: sanitizeHtml(htmlBody),
       tags,
+      // Preserve diary metadata so it survives every re-save from the writer.
+      entryDate: current.type === 'diary' ? current.entryDate : undefined,
+      mood: current.type === 'diary' ? current.mood ?? null : undefined,
     });
     // Keep the readable content locally — saved.content may be encrypted
     current = { ...saved, tags: [...saved.tags], content: sanitizeHtml(htmlBody) };
