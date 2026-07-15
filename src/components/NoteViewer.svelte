@@ -24,7 +24,6 @@
   let saving = $state(false);
 
   let focusEl = $state(null);
-  let debugMsg = $state(''); // TEMP on-screen debug
 
   // ---- Link to (attach this note to a Stored Link) ----
   let showLinkPicker = $state(false);
@@ -161,17 +160,11 @@
   }
 
   async function save() {
-    // Pull straight from the editor in case oninput missed a keystroke (mobile).
+    // Pull from the editor element in case oninput missed a keystroke (mobile).
     if (focusMode && focusEl) htmlBody = focusEl.innerHTML;
-
-    // ON-SCREEN DEBUG — stays visible so you can screenshot it.
-    const dbgFocusEl = focusEl ? focusEl.innerHTML : 'NULL';
-    const dbgPlain = htmlToText(htmlBody).trim();
-    debugMsg = `1) focusMode=${focusMode} elLen=${dbgFocusEl.length} bodyLen=${htmlBody.length} plainLen=${dbgPlain.length} el="${dbgFocusEl.slice(0, 25)}"`;
-
     const plainTxt = htmlToText(htmlBody).trim();
     if (!plainTxt) {
-      debugMsg += ' || BLOCKED: empty, save stopped';
+      toast('Note cannot be empty');
       return;
     }
     saving = true;
@@ -179,22 +172,26 @@
       .split(',')
       .map((t) => t.trim().replace(/^#/, ''))
       .filter(Boolean);
-    const saved = await saveItem({
+    const payload = {
       id: current.id,
       type: current.type,
       title,
       description,
       content: sanitizeHtml(htmlBody),
       tags,
-      entryDate: current.type === 'diary' ? current.entryDate : undefined,
-      mood: current.type === 'diary' ? (current.mood ?? null) : undefined,
-    });
+    };
+    // Diary cards carry extra metadata; notes stay exactly as before.
+    if (current.type === 'diary') {
+      payload.entryDate = current.entryDate;
+      payload.mood = current.mood ?? null;
+    }
+    const saved = await saveItem(payload);
     current = { ...saved, tags: [...saved.tags], content: sanitizeHtml(htmlBody) };
-    debugMsg += ` || 2) SAVED storedLen=${(saved.content || '').length} preview="${htmlToText(saved.content || '').slice(0, 25)}"`;
     await clearDraft();
     saving = false;
     focusMode = false;
     mode = 'read';
+    toast('Changes saved ✓');
   }
 
   // Open auto-detected links inside a note in the external browser.
@@ -268,11 +265,6 @@
   {#if mode === 'read'}
     <!-- READ MODE -->
     <div class="flex-1 overflow-y-auto px-5 py-5">
-      {#if debugMsg}
-        <div class="mb-3 rounded-lg border-2 border-red-500 bg-red-50 p-2 text-[11px] font-mono leading-tight text-red-900" style="word-break: break-all;">
-          🐞 {debugMsg}
-        </div>
-      {/if}
       <h2 class="mb-1 font-display text-2xl font-bold leading-tight">
         {current.title}
       </h2>
