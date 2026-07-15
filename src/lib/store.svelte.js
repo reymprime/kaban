@@ -563,7 +563,18 @@ export async function saveFolder(data) {
   const folder = {
     id: data.id || newId(),
     name: (data.name || '').trim() || 'Untitled folder',
-    category: data.category || 'all',
+    // Category is a lifetime-fixed format: set once at creation, never changed.
+    // On edit we always keep the existing category, ignoring any new value.
+    category: existing ? existing.category : data.category || 'all',
+    description: (data.description || '').trim(),
+    // Manual sort position for drag-to-reorder; newest folders sort after
+    // existing ones until the user reorders them.
+    order:
+      data.order !== undefined
+        ? data.order
+        : existing && typeof existing.order === 'number'
+          ? existing.order
+          : now,
     createdAt: existing ? existing.createdAt : now,
     updatedAt: now,
   };
@@ -575,6 +586,19 @@ export async function saveFolder(data) {
     vault.folders.push(folder);
   }
   return folder;
+}
+
+// Persist a new folder order (array of folder ids in the desired sequence).
+export async function reorderFolders(orderedIds) {
+  const updates = [];
+  orderedIds.forEach((id, index) => {
+    const f = vault.folders.find((x) => x.id === id);
+    if (f) {
+      f.order = index;
+      updates.push({ ...f });
+    }
+  });
+  for (const f of updates) await db.putFolder(f);
 }
 
 // Move cards into a folder (folderId) or kick them back home (null)

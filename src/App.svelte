@@ -1,6 +1,6 @@
 <script>
   import { onMount } from 'svelte';
-  import { vault, loadVault, shareItems, moveToFolder, reorderItems, tapFeedback, toast } from './lib/store.svelte.js';
+  import { vault, loadVault, shareItems, moveToFolder, reorderItems, reorderFolders, tapFeedback, toast } from './lib/store.svelte.js';
   import { TABS, TABS_BY_WORLD, WORLDS, WORLD_OF_TAB, CATEGORIES } from './lib/categories.js';
   import { stripForSearch } from './lib/richtext.js';
   import Header from './components/Header.svelte';
@@ -193,7 +193,12 @@
     let fs = vault.folders;
     const q = query.trim().toLowerCase();
     if (q) fs = fs.filter((f) => f.name.toLowerCase().includes(q));
-    return [...fs].sort((a, b) => a.name.localeCompare(b.name));
+    // Manual drag order (falls back to name for folders created before order)
+    const ord = (f) => (typeof f.order === 'number' ? f.order : Infinity);
+    return [...fs].sort((a, b) => {
+      const d = ord(a) - ord(b);
+      return d !== 0 ? d : a.name.localeCompare(b.name);
+    });
   });
 
   const folderCounts = $derived.by(() => {
@@ -225,6 +230,32 @@
     for (const i of vault.items) c[i.type] = (c[i.type] || 0) + 1;
     return c;
   });
+
+  // Folder drag-to-reorder (hold a folder and drag to a new position)
+  let folderDragId = $state(null);
+  let folderOverId = $state(null);
+
+  function onFolderDragStart(id) {
+    folderDragId = id;
+    tapFeedback();
+  }
+  function onFolderDragEnter(id) {
+    if (folderDragId && id !== folderDragId) folderOverId = id;
+  }
+  async function onFolderDrop() {
+    if (folderDragId && folderOverId && folderDragId !== folderOverId) {
+      const ids = visibleFolders.map((f) => f.id);
+      const from = ids.indexOf(folderDragId);
+      const to = ids.indexOf(folderOverId);
+      if (from > -1 && to > -1) {
+        ids.splice(to, 0, ids.splice(from, 1)[0]);
+        await reorderFolders(ids);
+        tapFeedback();
+      }
+    }
+    folderDragId = null;
+    folderOverId = null;
+  }
 
   function newItem() {
     let type = tab === 'all' || tab === 'folder' ? 'image' : tab;
@@ -264,6 +295,9 @@
           <p class="truncate font-display text-[15px] font-bold leading-none">
             {openFolder.name}
           </p>
+          {#if openFolder.description}
+            <p class="mt-0.5 line-clamp-1 text-[11px] text-ink-soft">{openFolder.description}</p>
+          {/if}
           <p class="mt-0.5 text-[11px] text-ink-soft">
             {folderCounts[openFolder.id] || 0} card{(folderCounts[openFolder.id] || 0) === 1 ? '' : 's'}
           </p>
@@ -329,7 +363,15 @@
     {#if visibleFolders.length}
       <ul class="folder-grid mb-3">
         {#each visibleFolders as f (f.id)}
-          <li class="relative">
+          <li
+            class="relative transition-opacity {folderDragId === f.id ? 'opacity-40' : ''} {folderOverId === f.id ? 'ring-2 ring-teal rounded-2xl' : ''}"
+            draggable="true"
+            ondragstart={() => onFolderDragStart(f.id)}
+            ondragenter={() => onFolderDragEnter(f.id)}
+            ondragover={(e) => e.preventDefault()}
+            ondrop={onFolderDrop}
+            ondragend={onFolderDrop}
+          >
             <button
               class="flex w-full items-center gap-3 rounded-2xl border border-line bg-card px-4 py-3 pr-12 text-left active:bg-paper"
               onclick={() => (openFolder = f)}
@@ -339,6 +381,9 @@
               </svg>
               <span class="min-w-0 flex-1">
                 <span class="block truncate text-[14px] font-semibold">{f.name}</span>
+                {#if f.description}
+                  <span class="mt-0.5 block truncate text-[11px] text-ink-soft">{f.description}</span>
+                {/if}
                 <span class="block text-[11px] text-ink-soft">
                   {folderCounts[f.id] || 0} card{(folderCounts[f.id] || 0) === 1 ? '' : 's'}
                 </span>

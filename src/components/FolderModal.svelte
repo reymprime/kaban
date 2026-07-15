@@ -8,6 +8,7 @@
   const isNew = !folder.id;
   let name = $state(folder.name || '');
   let category = $state(folder.category || '');
+  let description = $state(folder.description || '');
   let saving = $state(false);
   let confirmingDelete = $state(false);
 
@@ -33,7 +34,7 @@
       return;
     }
     saving = true;
-    await saveFolder({ id: folder.id, name, category });
+    await saveFolder({ id: folder.id, name, category, description });
     saving = false;
     toast(isNew ? 'Folder created ✓' : 'Folder updated ✓');
     onclose();
@@ -102,23 +103,57 @@
       class="mb-4 w-full rounded-xl border border-line bg-paper px-3.5 py-2.5 text-[15px] focus:border-teal focus:outline-none"
     />
 
-    <p class="mb-1.5 text-[12px] font-semibold text-ink-soft">
-      What is this folder for?
-    </p>
-    <div class="mb-5 grid grid-cols-2 gap-2">
-      {#each options as opt (opt.id)}
-        <button
-          class="rounded-xl border px-3 py-2.5 text-[13px] font-semibold transition-colors
-            {opt.id === 'all' ? 'col-span-2' : ''}"
-          style={category === opt.id
-            ? `border-color: ${opt.color}; background: ${opt.soft}; color: ${opt.color};`
-            : 'border-color: var(--color-line); color: var(--color-ink-soft);'}
-          onclick={() => (category = opt.id)}
-        >
-          {opt.label}
-        </button>
-      {/each}
-    </div>
+    <label class="mb-1 block text-[12px] font-semibold text-ink-soft" for="fd-desc">
+      Description
+      <span class="font-normal">(optional — what's inside &amp; what it's for)</span>
+    </label>
+    <textarea
+      id="fd-desc"
+      bind:value={description}
+      rows="2"
+      placeholder="e.g. All rain-scene image prompts for GISING Part 2"
+      class="mb-4 w-full resize-y rounded-xl border border-line bg-paper px-3.5 py-2.5 text-[14px] leading-relaxed focus:border-teal focus:outline-none"
+    ></textarea>
+
+    {#if isNew}
+      <p class="mb-1.5 text-[12px] font-semibold text-ink-soft">
+        What is this folder for?
+      </p>
+      <p class="mb-2 text-[11px] text-ink-soft">
+        Pick carefully — a folder's purpose is fixed for life and can't be changed later.
+      </p>
+      <div class="mb-5 grid grid-cols-2 gap-2">
+        {#each options as opt (opt.id)}
+          <button
+            class="rounded-xl border px-3 py-2.5 text-[13px] font-semibold transition-colors
+              {opt.id === 'all' ? 'col-span-2' : ''}"
+            style={category === opt.id
+              ? `border-color: ${opt.color}; background: ${opt.soft}; color: ${opt.color};`
+              : 'border-color: var(--color-line); color: var(--color-ink-soft);'}
+            onclick={() => (category = opt.id)}
+          >
+            {opt.label}
+          </button>
+        {/each}
+      </div>
+    {:else}
+      {@const opt = options.find((o) => o.id === category)}
+      <p class="mb-1.5 text-[12px] font-semibold text-ink-soft">Folder purpose</p>
+      <div
+        class="mb-5 flex items-center justify-between rounded-xl border px-3.5 py-2.5"
+        style="border-color: {opt?.color || 'var(--color-line)'}; background: {opt?.soft || 'var(--color-paper)'};"
+      >
+        <span class="text-[13px] font-semibold" style="color: {opt?.color || 'var(--color-ink-soft)'};">
+          {opt?.label || 'All'}
+        </span>
+        <span class="flex items-center gap-1 text-[11px] font-medium text-ink-soft">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="5" y="11" width="14" height="10" rx="2" /><path d="M8 11V7a4 4 0 0 1 8 0v4" />
+          </svg>
+          Fixed for life
+        </span>
+      </div>
+    {/if}
 
     {#if !confirmingDelete}
       <div class="flex gap-2">
