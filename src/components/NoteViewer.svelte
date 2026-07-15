@@ -29,7 +29,6 @@
   let showLinkPicker = $state(false);
   let linkQuery = $state('');
   const storedLinks = $derived(vault.items.filter((i) => i.type === 'link'));
-  // Filter the picker by title or host as the user types.
   const filteredLinks = $derived.by(() => {
     const q = linkQuery.trim().toLowerCase();
     if (!q) return storedLinks;
@@ -117,8 +116,8 @@
     focusMode = false;
   }
 
-  // Switching to Read Mode from the toggle should PRESERVE the user's work,
-  // not throw it away. If there's content, save it; otherwise just switch.
+  // Switching to Read Mode should PRESERVE the user's work, not discard it.
+  // If there's content, save it; otherwise just switch back.
   async function switchToRead() {
     if (mode !== 'edit') {
       mode = 'read';
@@ -127,7 +126,7 @@
     if (focusMode && focusEl) htmlBody = focusEl.innerHTML;
     const hasText = htmlToText(htmlBody).trim().length > 0;
     if (hasText) {
-      await save(); // save() already flips to read mode + shows a toast
+      await save(); // save() flips to read mode + toasts
     } else {
       cancelEdit();
     }
@@ -161,9 +160,8 @@
   }
 
   async function save() {
-    if (focusMode && focusEl) {
-      htmlBody = focusEl.innerHTML;
-    }
+    // Pull straight from the editor in case oninput missed a keystroke (mobile).
+    if (focusMode && focusEl) htmlBody = focusEl.innerHTML;
     const plainTxt = htmlToText(htmlBody).trim();
     if (!plainTxt) {
       toast('Note cannot be empty');
@@ -181,9 +179,9 @@
       description,
       content: sanitizeHtml(htmlBody),
       tags,
-      // Preserve diary metadata so it survives every re-save from the writer.
+      // Preserve diary metadata across re-saves from the writer.
       entryDate: current.type === 'diary' ? current.entryDate : undefined,
-      mood: current.type === 'diary' ? current.mood ?? null : undefined,
+      mood: current.type === 'diary' ? (current.mood ?? null) : undefined,
     });
     // Keep the readable content locally — saved.content may be encrypted
     current = { ...saved, tags: [...saved.tags], content: sanitizeHtml(htmlBody) };
@@ -194,7 +192,7 @@
     toast('Changes saved ✓');
   }
 
-  // Open auto-detected links inside a note in the external browser
+  // Open auto-detected links inside a note in the external browser.
   function handleNoteClick(e) {
     const a = e.target.closest('a[data-note-link]');
     if (!a) return;
@@ -284,18 +282,12 @@
       {/if}
       {#if isHtml(current.content)}
         <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
-        <div
-          class="note-body text-[15px] leading-relaxed text-ink"
-          onclick={handleNoteClick}
-        >
+        <div class="note-body text-[15px] leading-relaxed text-ink" onclick={handleNoteClick}>
           {@html linkifyHtml(sanitizeHtml(current.content))}
         </div>
       {:else}
         <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
-        <div
-          class="note-body whitespace-pre-wrap text-[15px] leading-relaxed text-ink"
-          onclick={handleNoteClick}
-        >
+        <div class="note-body whitespace-pre-wrap text-[15px] leading-relaxed text-ink" onclick={handleNoteClick}>
           {@html linkifyHtml(textToHtml(current.content))}
         </div>
       {/if}
@@ -428,10 +420,7 @@
             class="flex items-center gap-1 rounded-lg px-2 py-1.5 text-[12px] font-semibold active:bg-paper
               {current.linkedTo ? 'text-teal' : 'text-ink-soft'}"
             aria-label="Link this note to a Stored Link"
-            onclick={() => {
-              linkQuery = '';
-              showLinkPicker = true;
-            }}
+            onclick={() => { linkQuery = ''; showLinkPicker = true; }}
           >
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7" />
