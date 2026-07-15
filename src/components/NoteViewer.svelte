@@ -136,26 +136,31 @@
       focusEl.innerHTML = htmlBody;
       focusEl.focus();
     }
+    console.log('[KBN] enterFocus done', { focusEl: !!focusEl, htmlBodyLen: htmlBody.length });
   }
 
   async function exitFocus() {
-    // Capture what's on screen BEFORE leaving the writer, so content is never
-    // lost if the user exits to read-mode and saves from there (mobile keyboards
-    // don't always fire oninput on every keystroke).
     if (focusEl) htmlBody = focusEl.innerHTML;
+    console.log('[KBN] exitFocus', { htmlBodyLen: htmlBody.length, preview: htmlBody.slice(0, 60) });
     focusMode = false;
   }
 
   async function save() {
-    // Read straight from the editor element when in full-screen writing mode.
-    // Some mobile keyboards/IME don't fire `oninput` on every keystroke, which
-    // could leave htmlBody stale — pulling from focusEl here guarantees we save
-    // exactly what's on screen.
     if (focusMode && focusEl) {
       htmlBody = focusEl.innerHTML;
     }
     const plainTxt = htmlToText(htmlBody).trim();
+    console.log('[KBN] SAVE start', {
+      type: current.type,
+      focusMode,
+      hasFocusEl: !!focusEl,
+      focusElHTML: focusEl ? focusEl.innerHTML.slice(0, 60) : 'NULL',
+      htmlBodyLen: htmlBody.length,
+      htmlBodyPreview: htmlBody.slice(0, 60),
+      plainTxtLen: plainTxt.length,
+    });
     if (!plainTxt) {
+      console.log('[KBN] SAVE BLOCKED — empty text');
       toast('Note cannot be empty');
       return;
     }
@@ -177,6 +182,12 @@
     });
     // Keep the readable content locally — saved.content may be encrypted
     current = { ...saved, tags: [...saved.tags], content: sanitizeHtml(htmlBody) };
+    console.log('[KBN] SAVE done', {
+      savedId: saved.id,
+      savedContentLen: (saved.content || '').length,
+      currentContentLen: (current.content || '').length,
+      currentContentPreview: (current.content || '').slice(0, 60),
+    });
     await clearDraft();
     saving = false;
     focusMode = false;
