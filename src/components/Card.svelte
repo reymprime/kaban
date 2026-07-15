@@ -3,6 +3,7 @@
   import { detectPlatform, normalizeUrl, getYouTubeId, assessLinkRisk } from '../lib/platform.js';
   import { vault, copyText, togglePin, toggleLock, setProtection, toast } from '../lib/store.svelte.js';
   import { htmlToText } from '../lib/richtext.js';
+  import { goalProgress, deadlineLabel, deadlineTone } from '../lib/goals.js';
   import LinkWarningModal from './LinkWarningModal.svelte';
 
   let {
@@ -157,6 +158,19 @@
       day: 'numeric',
     });
   });
+
+  // Goal card values
+  const goalPct = $derived(item.type === 'goal' ? goalProgress(item) : 0);
+  const goalDone = $derived(item.type === 'goal' && goalPct >= 100);
+  const goalCountdown = $derived(item.type === 'goal' ? deadlineLabel(item.targetDate) : '');
+  const goalTone = $derived(item.type === 'goal' ? deadlineTone(item) : 'normal');
+  const goalToneColor = $derived(
+    goalTone === 'overdue'
+      ? '#dc2626'
+      : goalTone === 'soon'
+        ? '#d97706'
+        : 'var(--color-ink-soft)'
+  );
 
   // Lock icon animation — re-keyed to replay CSS animation each press
   let anim = $state({ n: 0, type: '' });
@@ -381,6 +395,25 @@
             <path d="M5 12h14m-6-6 6 6-6 6" />
           </svg>
         </span>
+      </button>
+    {:else if item.type === 'goal'}
+      <button class="block w-full text-left" onclick={onview} aria-label="Open goal">
+        <div class="mb-2 flex items-center justify-between">
+          <span class="font-display text-xl font-bold" style="color: var(--color-cat-goal);">{goalPct}%</span>
+          {#if goalDone}
+            <span class="rounded-full px-2 py-0.5 text-[11px] font-bold text-white" style="background: var(--color-cat-goal);">Achieved 🎉</span>
+          {:else}
+            <span class="text-[12px] font-semibold" style="color: {goalToneColor};">{goalCountdown}</span>
+          {/if}
+        </div>
+        <div class="h-2.5 overflow-hidden rounded-full bg-paper">
+          <div class="h-full rounded-full transition-all duration-500" style="width: {goalPct}%; background: linear-gradient(90deg, var(--color-cat-goal), #34d399);"></div>
+        </div>
+        {#if item.trackMode === 'milestones' && item.milestones?.length}
+          <p class="mt-2 text-[12px] text-ink-soft">
+            {item.milestones.filter((m) => m.done).length}/{item.milestones.length} milestones done
+          </p>
+        {/if}
       </button>
     {:else}
       <p class="clamp-3 rounded-lg bg-paper p-2.5 font-mono text-[12px] leading-relaxed text-ink-soft">

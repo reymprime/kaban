@@ -485,6 +485,41 @@ export async function saveItem(data) {
         : existing
           ? existing.mood || null
           : null,
+    // Goal fields — kept for all types but only meaningful for 'goal'.
+    // targetDate = deadline (YYYY-MM-DD, required for goals);
+    // trackMode = 'slider' | 'milestones';
+    // progress = 0..100 (used directly in slider mode, derived in milestone mode);
+    // milestones = [{ id, text, done }]; status = 'active' | 'done'.
+    targetDate:
+      data.targetDate !== undefined
+        ? data.targetDate || null
+        : existing
+          ? existing.targetDate || null
+          : null,
+    trackMode:
+      data.trackMode !== undefined
+        ? data.trackMode || 'slider'
+        : existing
+          ? existing.trackMode || 'slider'
+          : 'slider',
+    progress:
+      data.progress !== undefined
+        ? Math.max(0, Math.min(100, Math.round(data.progress) || 0))
+        : existing
+          ? existing.progress || 0
+          : 0,
+    milestones:
+      data.milestones !== undefined
+        ? [...data.milestones]
+        : existing
+          ? existing.milestones || []
+          : [],
+    status:
+      data.status !== undefined
+        ? data.status || 'active'
+        : existing
+          ? existing.status || 'active'
+          : 'active',
     // Preserve folder when caller (e.g. NoteViewer) doesn't send folderId
     folderId:
       data.folderId !== undefined

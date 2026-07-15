@@ -20,10 +20,18 @@
   let mood = $state(item.mood || '');
   const MOODS = ['😊', '😌', '😐', '😔', '😤', '😢', '🥳', '😴'];
 
+  // Goal-specific: required target date + how progress is tracked.
+  let targetDate = $state(item.targetDate || '');
+  let trackMode = $state(item.trackMode || 'slider');
+
   const isLink = $derived(type === 'link');
   const isDiary = $derived(type === 'diary');
-  // Diary reuses the note flow: content is written in the full-screen editor.
-  const writesInFullScreen = $derived(type === 'note' || type === 'diary');
+  const isGoal = $derived(type === 'goal');
+  // Diary and goal reuse the note flow: details are set here, the body/steps
+  // are handled in the full-screen view after saving.
+  const writesInFullScreen = $derived(
+    type === 'note' || type === 'diary' || type === 'goal'
+  );
   const folderOptions = $derived(
     vault.folders
       .filter((f) => f.category === type || f.category === 'all')
@@ -34,6 +42,10 @@
     const skipContent = writesInFullScreen;
     if (!skipContent && !content.trim()) {
       toast(isLink ? 'Paste a link first' : 'Content cannot be empty');
+      return;
+    }
+    if (isGoal && !targetDate) {
+      toast('Set a target date for your goal');
       return;
     }
     saving = true;
@@ -48,13 +60,15 @@
       type,
       title,
       description,
-      // Notes and diary entries are written in the full-screen editor;
-      // keep existing content untouched here.
+      // Notes, diary entries, and goals are fleshed out in the full-screen
+      // view; keep existing content untouched here.
       content: skipContent ? undefined : content,
       tags,
       folderId: validFolder,
       entryDate: isDiary ? entryDate : undefined,
       mood: isDiary ? mood || null : undefined,
+      targetDate: isGoal ? targetDate : undefined,
+      trackMode: isGoal ? trackMode : undefined,
     });
     saving = false;
     toast(isNew ? 'Saved to your kaban ✓' : 'Changes saved ✓');
@@ -99,12 +113,15 @@
            Goal/Task editors arrive in later phases, so they're not offered yet;
            diary opens straight from its own tab with the type pre-set. -->
       {#if isNew}
-        {#if isDiary}
-          <div class="mb-4 flex items-center gap-2.5 rounded-xl px-3.5 py-2.5" style="background: var(--color-cat-diary-soft);">
-            <span class="rounded-md px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide" style="background: var(--color-cat-diary); color: #fff;">
-              Diary
+        {#if isDiary || isGoal}
+          {@const cd = isDiary ? 'diary' : 'goal'}
+          <div class="mb-4 flex items-center gap-2.5 rounded-xl px-3.5 py-2.5" style="background: var(--color-cat-{cd}-soft);">
+            <span class="rounded-md px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide" style="background: var(--color-cat-{cd}); color: #fff;">
+              {isDiary ? 'Diary' : 'Goal'}
             </span>
-            <p class="text-[12px]" style="color: var(--color-cat-diary);">New diary entry</p>
+            <p class="text-[12px]" style="color: var(--color-cat-{cd});">
+              {isDiary ? 'New diary entry' : 'New goal'}
+            </p>
           </div>
         {:else}
           <div class="mb-4 grid grid-cols-2 gap-2">
@@ -192,13 +209,61 @@
         </div>
       {/if}
 
+      {#if isGoal}
+        <div class="mb-4">
+          <label class="mb-1 block text-[12px] font-semibold text-ink-soft" for="kb-target">
+            Target date <span style="color: var(--color-cat-goal);">*</span>
+          </label>
+          <input
+            id="kb-target"
+            type="date"
+            bind:value={targetDate}
+            min={todayISO}
+            class="w-full rounded-xl border border-line bg-paper px-3.5 py-2.5 text-[14px] focus:border-teal focus:outline-none"
+          />
+        </div>
+        <div class="mb-4">
+          <span class="mb-1.5 block text-[12px] font-semibold text-ink-soft">
+            How do you want to track progress?
+          </span>
+          <div class="grid grid-cols-2 gap-2">
+            <button
+              type="button"
+              class="rounded-xl border px-3 py-2.5 text-left transition-all active:scale-[0.98]"
+              style={trackMode === 'slider'
+                ? 'border-color: var(--color-cat-goal); background: var(--color-cat-goal-soft);'
+                : 'border-color: var(--color-line);'}
+              onclick={() => (trackMode = 'slider')}
+            >
+              <span class="block text-[13px] font-semibold" style={trackMode === 'slider' ? 'color: var(--color-cat-goal);' : ''}>Slider</span>
+              <span class="block text-[11px] text-ink-soft">Set % yourself</span>
+            </button>
+            <button
+              type="button"
+              class="rounded-xl border px-3 py-2.5 text-left transition-all active:scale-[0.98]"
+              style={trackMode === 'milestones'
+                ? 'border-color: var(--color-cat-goal); background: var(--color-cat-goal-soft);'
+                : 'border-color: var(--color-line);'}
+              onclick={() => (trackMode = 'milestones')}
+            >
+              <span class="block text-[13px] font-semibold" style={trackMode === 'milestones' ? 'color: var(--color-cat-goal);' : ''}>Milestones</span>
+              <span class="block text-[11px] text-ink-soft">Auto from steps</span>
+            </button>
+          </div>
+        </div>
+      {/if}
+
       {#if writesInFullScreen}
         <div class="mb-4 flex items-center gap-2 rounded-xl bg-paper px-3.5 py-2.5">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={isDiary ? 'var(--color-cat-diary)' : 'var(--color-cat-note)'} stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="shrink-0">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={isDiary ? 'var(--color-cat-diary)' : isGoal ? 'var(--color-cat-goal)' : 'var(--color-cat-note)'} stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="shrink-0">
             <path d="M17 3a2.8 2.8 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3Z" />
           </svg>
           <p class="text-[12px] text-ink-soft">
-            You'll write {isDiary ? 'your entry' : 'the note'} in the full-screen editor after saving.
+            {isGoal
+              ? "You'll set your progress and milestones after saving."
+              : isDiary
+                ? "You'll write your entry in the full-screen editor after saving."
+                : "You'll write the note in the full-screen editor after saving."}
           </p>
         </div>
       {:else}
