@@ -32,7 +32,7 @@
       </div>
       <div>
         <h2 class="font-display text-xl font-bold text-white">Kaban</h2>
-        <p class="text-[12px] font-medium text-white/70">Prompt Vault · {version}</p>
+        <p class="text-[12px] font-medium text-white/70">Your Personal Vault · {version}</p>
       </div>
     </div>
 
