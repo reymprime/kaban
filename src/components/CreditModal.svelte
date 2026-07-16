@@ -40,7 +40,7 @@
       <p class="mb-0.5 text-[11px] font-semibold uppercase tracking-widest text-ink-soft">
         Created by
       </p>
-      <p class="mb-4 font-display text-lg font-bold">Gnokz Production</p>
+      <p class="mb-4 font-display text-lg font-bold">Reymark Delagao</p>
 
       <p class="mb-4 text-[12px] leading-relaxed text-ink-soft">
         Built with Svelte, crafted entirely on Android.

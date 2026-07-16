@@ -291,7 +291,7 @@ const WELCOME_HTML = [
   '<b><font color="#0F766E">■</font> Dark mode</b><br>',
   'Tap the sun/moon icon in the header to switch themes anytime.<br><br>',
   '<i>You can safely delete this note once you know your way around. Enjoy your vault!</i><br>',
-  '<b>— Gnokz Production</b>',
+  '<b>— Reymark Delagao</b>',
 ].join('');
 
 // ---- Vault password / protection ----
