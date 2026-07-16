@@ -1,6 +1,7 @@
 <script>
   import { lockScroll } from '../lib/scrollLock.js';
   import { saveItem } from '../lib/store.svelte.js';
+  import DatePicker from './DatePicker.svelte';
   import {
     PRIORITIES,
     newTask,
@@ -211,15 +212,7 @@
 
           <!-- Due row -->
           <div class="mt-1.5 flex items-center gap-2" style="padding-left: 2.15rem;">
-            {#if editingDue === t.id}
-              <input
-                type="date"
-                value={t.due || ''}
-                onchange={(e) => setDue(t.id, e.target.value)}
-                class="rounded-lg border border-line bg-paper px-2 py-1 text-[12px] focus:border-teal focus:outline-none"
-              />
-              <button class="text-[12px] text-ink-soft underline" onclick={() => setDue(t.id, '')}>Clear</button>
-            {:else if t.due}
+            {#if t.due}
               <button class="flex items-center gap-1 text-[12px] font-medium" style="color: {dueColor(t.due)};" onclick={() => (editingDue = t.id)}>
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                   <rect x="3" y="4" width="18" height="18" rx="2" /><path d="M16 2v4M8 2v4M3 10h18" />
@@ -288,3 +281,13 @@
     </div>
   </div>
 </div>
+
+{#if editingDue}
+  {@const editTask = tasks.find((x) => x.id === editingDue)}
+  <DatePicker
+    value={editTask?.due || ''}
+    onset={(iso) => setDue(editingDue, iso)}
+    oncancel={() => (editingDue = null)}
+    onclear={() => setDue(editingDue, '')}
+  />
+{/if}

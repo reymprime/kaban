@@ -4,6 +4,7 @@
   import { vault, saveItem, toast } from '../lib/store.svelte.js';
   import { MOODS } from '../lib/moods.js';
   import MoodIcon from './MoodIcon.svelte';
+  import DatePicker from './DatePicker.svelte';
 
   let { item, onclose, onsaved } = $props();
 
@@ -24,6 +25,23 @@
   // Goal-specific: required target date + how progress is tracked.
   let targetDate = $state(item.targetDate || '');
   let trackMode = $state(item.trackMode || 'slider');
+
+  // Custom DatePicker modals (replaces ugly native browser pickers)
+  let showEntryPicker = $state(false);
+  let showTargetPicker = $state(false);
+
+  // Friendly display like "Thu, Jul 16, 2026"
+  function fmtDate(iso) {
+    if (!iso) return '';
+    const d = new Date(iso + 'T00:00:00');
+    if (isNaN(d)) return iso;
+    return d.toLocaleDateString(undefined, {
+      weekday: 'short',
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+    });
+  }
 
   const isLink = $derived(type === 'link');
   const isDiary = $derived(type === 'diary');
@@ -181,16 +199,19 @@
       {#if isDiary}
         <div class="mb-4 grid grid-cols-1 gap-4">
           <div>
-            <label class="mb-1 block text-[12px] font-semibold text-ink-soft" for="kb-date">
+            <span class="mb-1 block text-[12px] font-semibold text-ink-soft">
               Entry date
-            </label>
-            <input
-              id="kb-date"
-              type="date"
-              bind:value={entryDate}
-              max={todayISO}
-              class="w-full rounded-xl border border-line bg-paper px-3.5 py-2.5 text-[14px] focus:border-teal focus:outline-none"
-            />
+            </span>
+            <button
+              type="button"
+              class="flex w-full items-center justify-between rounded-xl border border-line bg-paper px-3.5 py-2.5 text-left text-[14px] active:bg-card"
+              onclick={() => (showEntryPicker = true)}
+            >
+              <span>{fmtDate(entryDate)}</span>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--color-ink-soft)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="shrink-0">
+                <rect x="3" y="4" width="18" height="18" rx="2" /><path d="M16 2v4M8 2v4M3 10h18" />
+              </svg>
+            </button>
           </div>
           <div>
             <span class="mb-1.5 block text-[12px] font-semibold text-ink-soft">
@@ -217,16 +238,21 @@
 
       {#if isGoal}
         <div class="mb-4">
-          <label class="mb-1 block text-[12px] font-semibold text-ink-soft" for="kb-target">
+          <span class="mb-1 block text-[12px] font-semibold text-ink-soft">
             Target date <span style="color: var(--color-cat-goal);">*</span>
-          </label>
-          <input
-            id="kb-target"
-            type="date"
-            bind:value={targetDate}
-            min={todayISO}
-            class="w-full rounded-xl border border-line bg-paper px-3.5 py-2.5 text-[14px] focus:border-teal focus:outline-none"
-          />
+          </span>
+          <button
+            type="button"
+            class="flex w-full items-center justify-between rounded-xl border border-line bg-paper px-3.5 py-2.5 text-left text-[14px] active:bg-card"
+            onclick={() => (showTargetPicker = true)}
+          >
+            <span class={targetDate ? '' : 'text-ink-soft'}>
+              {targetDate ? fmtDate(targetDate) : 'Pick a date…'}
+            </span>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--color-ink-soft)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="shrink-0">
+              <rect x="3" y="4" width="18" height="18" rx="2" /><path d="M16 2v4M8 2v4M3 10h18" />
+            </svg>
+          </button>
         </div>
         <div class="mb-4">
           <span class="mb-1.5 block text-[12px] font-semibold text-ink-soft">
@@ -345,3 +371,22 @@
     </div>
   </div>
 </div>
+
+{#if showEntryPicker}
+  <DatePicker
+    value={entryDate}
+    max={todayISO}
+    onset={(iso) => { entryDate = iso; showEntryPicker = false; }}
+    oncancel={() => (showEntryPicker = false)}
+    onclear={() => { entryDate = todayISO; showEntryPicker = false; }}
+  />
+{/if}
+{#if showTargetPicker}
+  <DatePicker
+    value={targetDate}
+    min={todayISO}
+    onset={(iso) => { targetDate = iso; showTargetPicker = false; }}
+    oncancel={() => (showTargetPicker = false)}
+    onclear={() => { targetDate = ''; showTargetPicker = false; }}
+  />
+{/if}
