@@ -35,33 +35,43 @@
   const worldTabs = $derived(TABS_BY_WORLD[world]);
 
   // ---- Collapsible Vault/Journey switcher ----
-  // Hidden by default. Swipe DOWN near the top to reveal, swipe UP to hide.
-  // A small grabber handle hints that it's pullable.
+  // Hidden by default. Drag the handle DOWN to reveal, UP to hide — the panel
+  // follows your finger in real time, then snaps open/closed on release.
+  const SWITCHER_H = 64; // fully-open height in px
   let switcherOpen = $state(false);
+  let dragY = $state(0); // live drag offset (0..SWITCHER_H) while dragging
+  let dragging = $state(false);
   let swipeStartY = 0;
-  let swipeActive = false;
+  let baseY = 0; // height at drag start (0 if closed, SWITCHER_H if open)
+
+  // Effective height: follow the finger while dragging, else snap to state.
+  const switcherH = $derived(
+    dragging ? dragY : switcherOpen ? SWITCHER_H : 0
+  );
 
   function onSwipeStart(e) {
-    // Only start a pull if the touch begins near the top of the content area.
-    swipeStartY = e.clientY ?? (e.touches && e.touches[0]?.clientY) ?? 0;
-    swipeActive = true;
-  }
-  function onSwipeMove(e) {
-    if (!swipeActive) return;
-    const y = e.clientY ?? (e.touches && e.touches[0]?.clientY) ?? 0;
-    const dy = y - swipeStartY;
-    if (dy > 32 && !switcherOpen) {
-      switcherOpen = true;
-      swipeActive = false;
-      tapFeedback();
-    } else if (dy < -32 && switcherOpen) {
-      switcherOpen = false;
-      swipeActive = false;
-      tapFeedback();
+    swipeStartY = e.clientY ?? e.touches?.[0]?.clientY ?? 0;
+    baseY = switcherOpen ? SWITCHER_H : 0;
+    dragY = baseY;
+    dragging = true;
+    if (e.target.setPointerCapture && e.pointerId != null) {
+      try { e.target.setPointerCapture(e.pointerId); } catch {}
     }
   }
+  function onSwipeMove(e) {
+    if (!dragging) return;
+    const y = e.clientY ?? e.touches?.[0]?.clientY ?? 0;
+    // Clamp the live height between fully closed and fully open.
+    dragY = Math.max(0, Math.min(SWITCHER_H, baseY + (y - swipeStartY)));
+  }
   function onSwipeEnd() {
-    swipeActive = false;
+    if (!dragging) return;
+    dragging = false;
+    // Snap to whichever side the panel is closest to.
+    const shouldOpen = dragY > SWITCHER_H / 2;
+    if (shouldOpen !== switcherOpen) tapFeedback();
+    switcherOpen = shouldOpen;
+    dragY = shouldOpen ? SWITCHER_H : 0;
   }
   let query = $state('');
   let editing = $state(null); // item object (edit) or { type } (new)
@@ -325,28 +335,30 @@
         </button>
       </div>
     {:else}
-      <!-- Grabber handle + swipe zone: pull down to reveal the world switcher -->
+      <!-- Grabber handle + drag zone: pull down to reveal the world switcher -->
       <!-- svelte-ignore a11y_no_static_element_interactions -->
       <div
-        class="px-4 pt-1"
+        class="touch-none px-4 pt-1"
         onpointerdown={onSwipeStart}
         onpointermove={onSwipeMove}
         onpointerup={onSwipeEnd}
         onpointercancel={onSwipeEnd}
       >
         <button
-          class="mx-auto flex h-5 w-full items-center justify-center"
+          class="mx-auto flex h-6 w-full items-center justify-center"
           aria-label={switcherOpen ? 'Hide Vault and Journey' : 'Show Vault and Journey'}
-          onclick={() => { switcherOpen = !switcherOpen; tapFeedback(); }}
+          onclick={() => {
+            if (dragY === baseY) { switcherOpen = !switcherOpen; tapFeedback(); }
+          }}
         >
           <span class="h-1 w-9 rounded-full bg-line transition-colors"></span>
         </button>
       </div>
 
-      <!-- World switcher: Vault (collect) ↔ Journey (grow). Collapsible. -->
+      <!-- World switcher: Vault (collect) ↔ Journey (grow). Follows finger. -->
       <div
-        class="overflow-hidden px-4 transition-all duration-300 ease-out"
-        style="max-height: {switcherOpen ? '64px' : '0px'}; opacity: {switcherOpen ? 1 : 0}; margin-bottom: {switcherOpen ? '0.625rem' : '0'};"
+        class="overflow-hidden px-4 {dragging ? '' : 'transition-all duration-300 ease-out'}"
+        style="height: {switcherH}px; opacity: {switcherH / SWITCHER_H}; margin-bottom: {switcherH > 0 ? '0.625rem' : '0'};"
       >
         <div class="flex gap-1 rounded-2xl border border-line bg-paper p-1">
           {#each WORLDS as w (w.id)}
