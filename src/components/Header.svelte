@@ -43,7 +43,7 @@
           Kaban
         </h1>
         <p class="mt-0.5 text-[11px] font-medium text-ink-soft">
-          Prompt Vault by Gnokz
+          Personal Vault by Gnokz
         </p>
       </div>
     </button>

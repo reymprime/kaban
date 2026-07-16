@@ -2,7 +2,7 @@
   import { lockScroll } from '../lib/scrollLock.js';
   let { onclose } = $props();
 
-  const version = 'v40';
+  const version = 'v39';
 
   function onBackdrop(e) {
     if (e.target === e.currentTarget) onclose();
@@ -32,7 +32,7 @@
       </div>
       <div>
         <h2 class="font-display text-xl font-bold text-white">Kaban</h2>
-        <p class="text-[12px] font-medium text-white/70">Your Personal Vault · {version}</p>
+        <p class="text-[12px] font-medium text-white/70">Personal Vault · {version}</p>
       </div>
     </div>
 
