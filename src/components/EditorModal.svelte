@@ -29,6 +29,8 @@
   // Custom DatePicker modals (replaces ugly native browser pickers)
   let showEntryPicker = $state(false);
   let showTargetPicker = $state(false);
+  // Custom folder picker (replaces the native select dropdown)
+  let showFolderPicker = $state(false);
 
   // Friendly display like "Thu, Jul 16, 2026"
   function fmtDate(iso) {
@@ -324,19 +326,21 @@
       {/if}
 
       {#if folderOptions.length}
-        <label class="mb-1 block text-[12px] font-semibold text-ink-soft" for="kb-folder">
+        <span class="mb-1 block text-[12px] font-semibold text-ink-soft">
           Folder <span class="font-normal">(optional)</span>
-        </label>
-        <select
-          id="kb-folder"
-          bind:value={folderId}
-          class="mb-4 w-full appearance-none rounded-xl border border-line bg-paper px-3.5 py-2.5 text-[14px] focus:border-teal focus:outline-none"
+        </span>
+        <button
+          type="button"
+          class="mb-4 flex w-full items-center justify-between rounded-xl border border-line bg-paper px-3.5 py-2.5 text-left text-[14px] active:bg-card"
+          onclick={() => (showFolderPicker = true)}
         >
-          <option value="">No folder</option>
-          {#each folderOptions as f (f.id)}
-            <option value={f.id}>{f.name}</option>
-          {/each}
-        </select>
+          <span class={folderId ? '' : 'text-ink-soft'}>
+            {folderOptions.find((f) => f.id === folderId)?.name || 'No folder'}
+          </span>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--color-ink-soft)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="shrink-0">
+            <path d="m6 9 6 6 6-6" />
+          </svg>
+        </button>
       {/if}
 
       <label class="mb-1 block text-[12px] font-semibold text-ink-soft" for="kb-tags">
@@ -389,4 +393,60 @@
     oncancel={() => (showTargetPicker = false)}
     onclear={() => { targetDate = ''; showTargetPicker = false; }}
   />
+{/if}
+
+{#if showFolderPicker}
+  <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
+  <div
+    class="fixed inset-0 z-[60] flex items-center justify-center bg-ink/50 px-6 backdrop-blur-sm"
+    onclick={(e) => e.target === e.currentTarget && (showFolderPicker = false)}
+    role="presentation"
+  >
+    <div
+      class="pop-in flex max-h-[70vh] w-full max-w-sm flex-col overflow-hidden rounded-3xl bg-card shadow-2xl"
+      role="dialog"
+      aria-modal="true"
+      aria-label="Choose a folder"
+    >
+      <div class="px-6 py-4" style="background: var(--color-teal);">
+        <p class="font-display text-xl font-bold text-white">Choose a folder</p>
+      </div>
+      <div class="min-h-0 flex-1 overflow-y-auto p-2">
+        <button
+          class="flex w-full items-center justify-between rounded-xl px-4 py-3.5 text-left text-[15px] active:bg-paper"
+          onclick={() => { folderId = ''; showFolderPicker = false; }}
+        >
+          <span class={folderId ? 'text-ink' : 'font-semibold text-teal'}>No folder</span>
+          <span
+            class="flex h-5 w-5 items-center justify-center rounded-full border-2"
+            style={!folderId
+              ? 'border-color: var(--color-teal);'
+              : 'border-color: var(--color-line);'}
+          >
+            {#if !folderId}
+              <span class="h-2.5 w-2.5 rounded-full" style="background: var(--color-teal);"></span>
+            {/if}
+          </span>
+        </button>
+        {#each folderOptions as f (f.id)}
+          <button
+            class="flex w-full items-center justify-between rounded-xl px-4 py-3.5 text-left text-[15px] active:bg-paper"
+            onclick={() => { folderId = f.id; showFolderPicker = false; }}
+          >
+            <span class={folderId === f.id ? 'font-semibold text-teal' : 'text-ink'}>{f.name}</span>
+            <span
+              class="flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2"
+              style={folderId === f.id
+                ? 'border-color: var(--color-teal);'
+                : 'border-color: var(--color-line);'}
+            >
+              {#if folderId === f.id}
+                <span class="h-2.5 w-2.5 rounded-full" style="background: var(--color-teal);"></span>
+              {/if}
+            </span>
+          </button>
+        {/each}
+      </div>
+    </div>
+  </div>
 {/if}
