@@ -33,6 +33,36 @@
     openFolder = null; // leaving folder view when switching worlds
   }
   const worldTabs = $derived(TABS_BY_WORLD[world]);
+
+  // ---- Collapsible Vault/Journey switcher ----
+  // Hidden by default. Swipe DOWN near the top to reveal, swipe UP to hide.
+  // A small grabber handle hints that it's pullable.
+  let switcherOpen = $state(false);
+  let swipeStartY = 0;
+  let swipeActive = false;
+
+  function onSwipeStart(e) {
+    // Only start a pull if the touch begins near the top of the content area.
+    swipeStartY = e.clientY ?? (e.touches && e.touches[0]?.clientY) ?? 0;
+    swipeActive = true;
+  }
+  function onSwipeMove(e) {
+    if (!swipeActive) return;
+    const y = e.clientY ?? (e.touches && e.touches[0]?.clientY) ?? 0;
+    const dy = y - swipeStartY;
+    if (dy > 32 && !switcherOpen) {
+      switcherOpen = true;
+      swipeActive = false;
+      tapFeedback();
+    } else if (dy < -32 && switcherOpen) {
+      switcherOpen = false;
+      swipeActive = false;
+      tapFeedback();
+    }
+  }
+  function onSwipeEnd() {
+    swipeActive = false;
+  }
   let query = $state('');
   let editing = $state(null); // item object (edit) or { type } (new)
   let deleting = $state(null); // item pending delete confirmation
@@ -295,8 +325,29 @@
         </button>
       </div>
     {:else}
-      <!-- World switcher: Vault (collect) ↔ Journey (grow) -->
-      <div class="mb-2.5 px-4">
+      <!-- Grabber handle + swipe zone: pull down to reveal the world switcher -->
+      <!-- svelte-ignore a11y_no_static_element_interactions -->
+      <div
+        class="px-4 pt-1"
+        onpointerdown={onSwipeStart}
+        onpointermove={onSwipeMove}
+        onpointerup={onSwipeEnd}
+        onpointercancel={onSwipeEnd}
+      >
+        <button
+          class="mx-auto flex h-5 w-full items-center justify-center"
+          aria-label={switcherOpen ? 'Hide Vault and Journey' : 'Show Vault and Journey'}
+          onclick={() => { switcherOpen = !switcherOpen; tapFeedback(); }}
+        >
+          <span class="h-1 w-9 rounded-full bg-line transition-colors"></span>
+        </button>
+      </div>
+
+      <!-- World switcher: Vault (collect) ↔ Journey (grow). Collapsible. -->
+      <div
+        class="overflow-hidden px-4 transition-all duration-300 ease-out"
+        style="max-height: {switcherOpen ? '64px' : '0px'}; opacity: {switcherOpen ? 1 : 0}; margin-bottom: {switcherOpen ? '0.625rem' : '0'};"
+      >
         <div class="flex gap-1 rounded-2xl border border-line bg-paper p-1">
           {#each WORLDS as w (w.id)}
             <button
