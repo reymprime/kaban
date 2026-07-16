@@ -462,10 +462,27 @@ export async function saveItem(data) {
     id: data.id || newId(),
     // Card type is permanent — existing cards keep their original type forever
     type: existing ? existing.type : data.type,
-    title: (data.title || '').trim() || 'Untitled',
+    // When a caller omits title/description/tags (e.g. GoalView/TaskListView
+    // saving only progress), keep the existing values instead of blanking them.
+    title:
+      data.title !== undefined
+        ? data.title.trim() || 'Untitled'
+        : existing
+          ? existing.title
+          : 'Untitled',
     content: contentProvided ? plainContent : existing ? existing.content : '',
-    description: (data.description || '').trim(),
-    tags: [...(data.tags || [])],
+    description:
+      data.description !== undefined
+        ? data.description.trim()
+        : existing
+          ? existing.description || ''
+          : '',
+    tags:
+      data.tags !== undefined
+        ? [...data.tags]
+        : existing
+          ? [...(existing.tags || [])]
+          : [],
     pinned: existing ? !!existing.pinned : false,
     locked: existing ? !!existing.locked : false,
     protected: isProtected,
