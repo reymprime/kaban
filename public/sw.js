@@ -9,7 +9,7 @@
 //      the app is touched.
 //
 // Bump CACHE when you ship a new build to force a clean refresh.
-const CACHE = 'kaban-v40';
+const CACHE = 'kaban-v39';
 
 // ── Privacy & Data-Saving Shield ───────────────────────────────────────────
 // A small, curated list of the heaviest, most common third-party tracking,
