@@ -123,52 +123,11 @@ export function applyTheme() {
   if (meta) meta.setAttribute('content', dark ? '#0E1013' : '#F6F7F9');
 }
 
-let themeWaving = false;
-
 export async function setTheme(t, origin = null) {
-  const apply = () => {
-    vault.theme = t;
-    applyTheme();
-  };
-  const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  // Rapid re-taps while a wave is mid-flight apply instantly instead of
-  // stacking a second view transition on top of the first (which errors).
-  if (origin && document.startViewTransition && !reduce && !themeWaving) {
-    themeWaving = true;
-    // Freeze all CSS transitions so the snapshot paints in one frame
-    document.documentElement.classList.add('theme-wave');
-    try {
-      const vt = document.startViewTransition(apply);
-      await vt.ready;
-      const { x, y } = origin;
-      const r = Math.hypot(
-        Math.max(x, window.innerWidth - x),
-        Math.max(y, window.innerHeight - y)
-      );
-      // Circular wave reveal expanding from the theme button
-      document.documentElement.animate(
-        {
-          clipPath: [
-            `circle(0px at ${x}px ${y}px)`,
-            `circle(${r}px at ${x}px ${y}px)`,
-          ],
-        },
-        {
-          duration: 420,
-          easing: 'cubic-bezier(0.22, 1, 0.36, 1)',
-          pseudoElement: '::view-transition-new(root)',
-        }
-      );
-      await vt.finished;
-    } catch {
-      apply();
-    } finally {
-      document.documentElement.classList.remove('theme-wave');
-      themeWaving = false;
-    }
-  } else {
-    apply();
-  }
+  // Instant theme switch — no wave animation (kept it simple and bug-free).
+  // `origin` is accepted for backward compatibility but no longer used.
+  vault.theme = t;
+  applyTheme();
   try {
     await db.putMeta({ key: 'theme', value: t });
   } catch {}

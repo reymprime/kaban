@@ -5,8 +5,8 @@
   let { query = $bindable(''), onbackup, onsettings } = $props();
   let showCredits = $state(false);
 
-  function themeTap(e) {
-    setTheme(vault.isDark ? 'light' : 'dark', { x: e.clientX, y: e.clientY });
+  function themeTap() {
+    setTheme(vault.isDark ? 'light' : 'dark');
   }
 
   function shieldTap() {

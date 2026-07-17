@@ -286,22 +286,6 @@ button:active {
   }
 }
 
-/* Theme wave: we drive the reveal ourselves via clip-path */
-::view-transition-old(root),
-::view-transition-new(root) {
-  animation: none;
-  mix-blend-mode: normal;
-}
-
-/* While the wave runs, freeze EVERY color/property transition so the
-   new-theme snapshot renders instantly and the clip-path sweeps over a
-   static layer — no hundreds of concurrent repaints fighting the wave. */
-html.theme-wave *,
-html.theme-wave *::before,
-html.theme-wave *::after {
-  transition: none !important;
-}
-
 /* ---- Responsive shell ----
    Portrait phones keep the cozy single column. Anything wider —
    landscape phones, tablets, laptops — the shell EATS the whole

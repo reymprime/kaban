@@ -34,7 +34,7 @@
     {
       target: '#tour-theme',
       title: 'Dark & light mode',
-      text: 'Switch themes anytime — watch for the wave.',
+      text: 'Switch between light and dark themes anytime.',
     },
     {
       target: '#tour-backup',
