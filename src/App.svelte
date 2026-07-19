@@ -1,7 +1,7 @@
 <script>
   import { onMount } from 'svelte';
   import { vault, loadVault, shareItems, moveToFolder, reorderItems, reorderFolders, tapFeedback, toast } from './lib/store.svelte.js';
-  import { TABS, TABS_BY_WORLD, WORLDS, WORLD_OF_TAB, CATEGORIES } from './lib/categories.js';
+  import { TABS_BY_WORLD, CATEGORIES } from './lib/categories.js';
   import { stripForSearch } from './lib/richtext.js';
   import Header from './components/Header.svelte';
   import Card from './components/Card.svelte';
@@ -22,30 +22,51 @@
   import Tutorial from './components/Tutorial.svelte';
   import Toast from './components/Toast.svelte';
 
-  let world = $state('vault'); // 'vault' | 'journey'
   let tab = $state('all');
 
-  // Switch worlds and land on that world's first tab.
-  function setWorld(w) {
-    if (world === w) return;
-    world = w;
-    tab = TABS_BY_WORLD[w][0].id;
-    openFolder = null; // leaving folder view when switching worlds
-  }
-  const worldTabs = $derived(TABS_BY_WORLD[world]);
+  // The Journey tab is an inline expander â€” tapping it slides Diary/Goals/Tasks
+  // into the same row (and back out) instead of opening a separate switcher.
+  let journeyOpen = $state(false);
 
-  // ---- Collapsible Vault/Journey switcher ----
-  // Hidden by default. Tap the chevron pill to reveal the switcher, tap again
-  // to hide. No drag/swipe â€” a single deliberate tap keeps the interaction
-  // predictable and discoverable.
-  const SWITCHER_H = 64; // fully-open height in px
-  let switcherOpen = $state(false);
+  // `world` is derived from the active tab: any Journey category means we're in
+  // the Journey world, everything else is the Vault world. Keeping this as a
+  // derived value means all the existing world-based logic downstream (filters,
+  // FAB, views) keeps working untouched.
+  const JOURNEY_IDS = ['diary', 'goal', 'task'];
+  const world = $derived(JOURNEY_IDS.includes(tab) ? 'journey' : 'vault');
 
-  const switcherH = $derived(switcherOpen ? SWITCHER_H : 0);
+  // One flat tab row. The Journey sub-tabs are spliced in right after Journey
+  // only while it's expanded, so the whole thing lives on a single line.
+  const worldTabs = $derived.by(() => {
+    const vaultTabs = TABS_BY_WORLD.vault; // All, Image, Video, Link, Note, Folder
+    const journeyTabs = TABS_BY_WORLD.journey; // Diary, Goals, Tasks
+    const all = vaultTabs.find((t) => t.id === 'all');
+    const rest = vaultTabs.filter((t) => t.id !== 'all');
+    const journeyToggle = { id: 'journey', label: 'Journey', expander: true };
+    return [
+      all,
+      journeyToggle,
+      ...(journeyOpen ? journeyTabs : []),
+      ...rest,
+    ];
+  });
 
-  function toggleSwitcher() {
-    switcherOpen = !switcherOpen;
+  // Tapping a tab. Journey toggles the expander; picking a real tab selects it.
+  function selectTab(t) {
     tapFeedback();
+    if (t.expander) {
+      journeyOpen = !journeyOpen;
+      // Collapsing the row while sitting on a Journey card sends you back to All
+      if (!journeyOpen && JOURNEY_IDS.includes(tab)) {
+        tab = 'all';
+        openFolder = null;
+      }
+      return;
+    }
+    if (tab === t.id) return;
+    const leavingWorld = world !== (JOURNEY_IDS.includes(t.id) ? 'journey' : 'vault');
+    tab = t.id;
+    if (leavingWorld) openFolder = null; // leaving a world closes any open folder
   }
   let query = $state('');
   let editing = $state(null); // item object (edit) or { type } (new)
@@ -309,64 +330,48 @@
         </button>
       </div>
     {:else}
-      <!-- Tap the chevron pill to reveal / hide the Vault â†” Journey switcher.
-           Shows the current world so you always know where you stand, and the
-           rotating arrow signals there's more to open. -->
-      <div class="px-4 pt-1">
-        <button
-          class="mx-auto flex h-7 items-center gap-1.5 rounded-full border border-line bg-card px-3
-            text-[12px] font-semibold text-ink-soft transition-colors active:bg-line"
-          aria-label={switcherOpen ? 'Hide Vault and Journey switcher' : 'Show Vault and Journey switcher'}
-          aria-expanded={switcherOpen}
-          onclick={toggleSwitcher}
-        >
-          <span>{world === 'journey' ? 'Journey' : 'Vault'}</span>
-          <svg
-            width="14" height="14" viewBox="0 0 24 24" fill="none"
-            stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"
-            class="transition-transform duration-300 {switcherOpen ? 'rotate-180' : ''}"
-          >
-            <path d="m6 9 6 6 6-6" />
-          </svg>
-        </button>
-      </div>
-
-      <!-- World switcher: Vault (collect) â†” Journey (grow). -->
-      <div
-        class="overflow-hidden px-4 transition-all duration-300 ease-out"
-        style="height: {switcherH}px; opacity: {switcherH / SWITCHER_H}; margin-bottom: {switcherH > 0 ? '0.625rem' : '0'};"
-      >
-        <div class="flex gap-1 rounded-2xl border border-line bg-paper p-1">
-          {#each WORLDS as w (w.id)}
-            <button
-              class="flex-1 rounded-xl py-2 text-[13px] font-semibold transition-all active:scale-[0.98]
-                {world === w.id ? 'bg-card text-ink shadow-sm' : 'text-ink-soft'}"
-              onclick={() => setWorld(w.id)}
-            >
-              {w.label}
-            </button>
-          {/each}
-        </div>
-      </div>
-
+      <!-- One flat tab row. Tapping "Journey" expands its Diary/Goals/Tasks
+           inline (they slide in right after it); tapping again collapses them. -->
       <nav
         id="tour-tabs"
-        class="no-scrollbar flex gap-2 overflow-x-auto px-4 pb-3"
+        class="no-scrollbar flex gap-2 overflow-x-auto px-4 pb-3 pt-1"
         aria-label="Categories"
       >
         {#each worldTabs as t (t.id)}
-          <button
-            class="shrink-0 rounded-full border px-3.5 py-1.5 text-[13px] font-medium transition-colors
-              {tab === t.id
-              ? 'border-ink bg-ink text-paper'
-              : 'border-line bg-card text-ink-soft'}"
-            onclick={() => (tab = t.id)}
-          >
-            {t.label}
-            {#if counts[t.id]}
-              <span class="ml-1 opacity-60">{counts[t.id]}</span>
-            {/if}
-          </button>
+          {#if t.expander}
+            <button
+              class="flex shrink-0 items-center gap-1 rounded-full border px-3.5 py-1.5 text-[13px] font-medium transition-colors
+                {journeyOpen
+                  ? 'border-ink bg-ink text-paper'
+                  : 'border-line bg-card text-ink-soft'}"
+              aria-expanded={journeyOpen}
+              onclick={() => selectTab(t)}
+            >
+              {t.label}
+              <svg
+                width="13" height="13" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"
+                class="transition-transform duration-300 {journeyOpen ? 'rotate-180' : ''}"
+              >
+                <path d="m6 9 6 6 6-6" />
+              </svg>
+            </button>
+          {:else}
+            <button
+              class="shrink-0 rounded-full border px-3.5 py-1.5 text-[13px] font-medium transition-colors
+                {tab === t.id
+                ? 'border-ink bg-ink text-paper'
+                : JOURNEY_IDS.includes(t.id)
+                  ? 'border-teal/40 bg-teal/5 text-ink-soft'
+                  : 'border-line bg-card text-ink-soft'}"
+              onclick={() => selectTab(t)}
+            >
+              {t.label}
+              {#if counts[t.id]}
+                <span class="ml-1 opacity-60">{counts[t.id]}</span>
+              {/if}
+            </button>
+          {/if}
         {/each}
       </nav>
     {/if}
