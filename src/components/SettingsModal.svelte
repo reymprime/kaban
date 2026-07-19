@@ -1,9 +1,14 @@
 <script>
   import { lockScroll } from '../lib/scrollLock.js';
-  import { vault, saveSettings, tapFeedback } from '../lib/store.svelte.js';
+  import { vault, saveSettings, tapFeedback, setPremium } from '../lib/store.svelte.js';
   import ShieldDashboard from './ShieldDashboard.svelte';
 
   let { onclose } = $props();
+
+  function togglePremiumSkin() {
+    setPremium(!vault.premium);
+    tapFeedback();
+  }
 
   const HAPTICS = [
     { id: 'off', label: 'Off' },
@@ -68,7 +73,50 @@
       class="min-h-0 flex-1 overflow-y-auto px-5 pb-5"
       style="padding-bottom: calc(1.5rem + env(safe-area-inset-bottom));"
     >
-      <!-- ── PROTECTION ─────────────────────────────── -->
+      <!-- â”€â”€ PREMIUM â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ -->
+      <p class="mb-2 mt-1 px-1 text-[11px] font-bold uppercase tracking-[0.12em] text-ink-soft">
+        Appearance
+      </p>
+      <button
+        class="premium-hero group mb-6 flex w-full items-center gap-3.5 overflow-hidden rounded-2xl border p-4 text-left transition-all active:scale-[0.99]
+          {vault.premium ? 'premium-hero--on' : 'border-line bg-card'}"
+        aria-pressed={vault.premium}
+        onclick={togglePremiumSkin}
+      >
+        <span
+          class="relative flex h-11 w-11 shrink-0 items-center justify-center rounded-xl
+            {vault.premium ? 'bg-white/25' : 'bg-teal-soft'}"
+        >
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none"
+            stroke={vault.premium ? '#fff' : 'var(--color-teal)'}
+            stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 3 4 7.5v9L12 21l8-4.5v-9L12 3Z" />
+            <path d="M12 3v18M4 7.5l8 4.5 8-4.5" opacity="0.55" />
+          </svg>
+        </span>
+        <div class="min-w-0 flex-1">
+          <p class="flex items-center gap-1.5 text-[15px] font-bold leading-tight {vault.premium ? 'text-white' : 'text-ink'}">
+            Liquid Glass
+            <span class="rounded-full px-1.5 py-0.5 text-[9px] font-black uppercase tracking-wider
+              {vault.premium ? 'bg-white/25 text-white' : 'bg-teal text-white'}">Premium</span>
+          </p>
+          <p class="mt-0.5 text-[12px] leading-snug {vault.premium ? 'text-white/85' : 'text-ink-soft'}">
+            {vault.premium ? 'Your vault is dressed in glass âœ¨' : 'Transform Kaban into frosted Apple-grade glass'}
+          </p>
+        </div>
+        <!-- Switch -->
+        <span
+          class="relative h-7 w-12 shrink-0 rounded-full transition-colors duration-300
+            {vault.premium ? 'bg-white/40' : 'bg-line'}"
+        >
+          <span
+            class="absolute top-1 h-5 w-5 rounded-full bg-white shadow-md transition-all duration-300
+              {vault.premium ? 'left-6' : 'left-1'}"
+          ></span>
+        </span>
+      </button>
+
+      <!-- â”€â”€ PROTECTION â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ -->
       <p class="mb-2 mt-1 px-1 text-[11px] font-bold uppercase tracking-[0.12em] text-ink-soft">
         Protection
       </p>
@@ -76,7 +124,7 @@
         <ShieldDashboard {tapFeedback} />
       </div>
 
-      <!-- ── FEEDBACK ───────────────────────────────── -->
+      <!-- â”€â”€ FEEDBACK â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ -->
       <p class="mb-2 px-1 text-[11px] font-bold uppercase tracking-[0.12em] text-ink-soft">
         Feedback
       </p>
@@ -173,7 +221,7 @@
         </div>
       </div>
 
-      <!-- ── SECURITY (only if a vault password exists) ── -->
+      <!-- â”€â”€ SECURITY (only if a vault password exists) â”€â”€ -->
       {#if vault.security.configured}
         <p class="mb-2 px-1 text-[11px] font-bold uppercase tracking-[0.12em] text-ink-soft">
           Security
@@ -203,7 +251,7 @@
         </div>
       {/if}
 
-      <!-- ── ABOUT & MORE ───────────────────────────── -->
+      <!-- â”€â”€ ABOUT & MORE â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ -->
       <p class="mb-2 px-1 text-[11px] font-bold uppercase tracking-[0.12em] text-ink-soft">
         About &amp; more
       </p>
