@@ -17,6 +17,7 @@
     { id: 'default', label: 'Teal', accent: '#0F766E', surface: '#16181D' },
     { id: 'pumpkin', label: 'Pumpkin', accent: '#FD802E', surface: '#233D4C' },
     { id: 'jungle', label: 'Jungle', accent: '#CED46A', surface: '#07553B' },
+    { id: 'crimson', label: 'Crimson', accent: '#C5A880', surface: '#730000' },
   ];
 
   function pickTheme(id) {

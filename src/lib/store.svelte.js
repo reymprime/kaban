@@ -132,6 +132,7 @@ function applyThemeColor(dark) {
   let color;
   if (vault.palette === 'pumpkin') color = dark ? '#1B2E3A' : '#F6F7F9';
   else if (vault.palette === 'jungle') color = dark ? '#06231A' : '#F6F7F9';
+  else if (vault.palette === 'crimson') color = dark ? '#200707' : '#F6F7F9';
   else color = dark ? '#0E1013' : '#F6F7F9';
   el.setAttribute('content', color);
 }

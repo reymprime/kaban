@@ -119,6 +119,34 @@ html {
   --color-teal-soft: #22331a;
 }
 
+/* ============================================================
+   PALETTE: Crimson & Sand   (data-palette="crimson")
+   Dark-red accent (#730000) with a warm gray-orange (#C5A880) as
+   the cream text / soft tint. Dark mode uses deep maroon surfaces
+   with a brighter brick accent and cream type - echoing the tan-on
+   -dark-red look of the reference. Accent stays deep enough for
+   white button labels; the sandy tan is used for tints and text.
+   ============================================================ */
+
+/* Light base + dark-red accent + warm sand tint */
+[data-palette='crimson'] {
+  --color-ink: #3a1212;
+  --color-ink-soft: #7c5a50;
+  --color-teal: #730000;
+  --color-teal-soft: #efe1cd;
+}
+
+/* Dark: deep maroon surfaces + brick accent + cream/tan type */
+[data-palette='crimson'][data-theme='dark'] {
+  --color-paper: #200707;
+  --color-card: #300c0c;
+  --color-ink: #eddcc5;
+  --color-ink-soft: #bd9c79;
+  --color-line: #4d1c1c;
+  --color-teal: #cf3a2f;
+  --color-teal-soft: #3a1414;
+}
+
 body {
   transition: background-color 0.2s ease, color 0.2s ease;
 }
