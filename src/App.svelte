@@ -35,43 +35,17 @@
   const worldTabs = $derived(TABS_BY_WORLD[world]);
 
   // ---- Collapsible Vault/Journey switcher ----
-  // Hidden by default. Drag the handle DOWN to reveal, UP to hide — the panel
-  // follows your finger in real time, then snaps open/closed on release.
+  // Hidden by default. Tap the chevron pill to reveal the switcher, tap again
+  // to hide. No drag/swipe â€” a single deliberate tap keeps the interaction
+  // predictable and discoverable.
   const SWITCHER_H = 64; // fully-open height in px
   let switcherOpen = $state(false);
-  let dragY = $state(0); // live drag offset (0..SWITCHER_H) while dragging
-  let dragging = $state(false);
-  let swipeStartY = 0;
-  let baseY = 0; // height at drag start (0 if closed, SWITCHER_H if open)
 
-  // Effective height: follow the finger while dragging, else snap to state.
-  const switcherH = $derived(
-    dragging ? dragY : switcherOpen ? SWITCHER_H : 0
-  );
+  const switcherH = $derived(switcherOpen ? SWITCHER_H : 0);
 
-  function onSwipeStart(e) {
-    swipeStartY = e.clientY ?? e.touches?.[0]?.clientY ?? 0;
-    baseY = switcherOpen ? SWITCHER_H : 0;
-    dragY = baseY;
-    dragging = true;
-    if (e.target.setPointerCapture && e.pointerId != null) {
-      try { e.target.setPointerCapture(e.pointerId); } catch {}
-    }
-  }
-  function onSwipeMove(e) {
-    if (!dragging) return;
-    const y = e.clientY ?? e.touches?.[0]?.clientY ?? 0;
-    // Clamp the live height between fully closed and fully open.
-    dragY = Math.max(0, Math.min(SWITCHER_H, baseY + (y - swipeStartY)));
-  }
-  function onSwipeEnd() {
-    if (!dragging) return;
-    dragging = false;
-    // Snap to whichever side the panel is closest to.
-    const shouldOpen = dragY > SWITCHER_H / 2;
-    if (shouldOpen !== switcherOpen) tapFeedback();
-    switcherOpen = shouldOpen;
-    dragY = shouldOpen ? SWITCHER_H : 0;
+  function toggleSwitcher() {
+    switcherOpen = !switcherOpen;
+    tapFeedback();
   }
   let query = $state('');
   let editing = $state(null); // item object (edit) or { type } (new)
@@ -109,7 +83,7 @@
 
   async function handleMove(folder) {
     const n = await moveToFolder(selected, folder.id);
-    toast(`Moved ${n} card${n === 1 ? '' : 's'} to “${folder.name}” ✓`);
+    toast(`Moved ${n} card${n === 1 ? '' : 's'} to â€œ${folder.name}â€ âœ“`);
     showFolderPicker = false;
     cancelSelect();
   }
@@ -122,13 +96,13 @@
   async function saveReorder(orderedIds) {
     await reorderItems(orderedIds);
     reordering = false;
-    toast('New order saved ✓');
+    toast('New order saved âœ“');
   }
 
   async function saveFolderReorder(orderedIds) {
     await reorderFolders(orderedIds);
     reorderingFolders = false;
-    toast('Folder order saved ✓');
+    toast('Folder order saved âœ“');
   }
 
   function startSelect(id) {
@@ -159,12 +133,12 @@
     const res = await shareItems(selected);
     sharing = false;
     const skipNote = res.skipped
-      ? ` — ${res.skipped} protected card${res.skipped === 1 ? '' : 's'} skipped`
+      ? ` â€” ${res.skipped} protected card${res.skipped === 1 ? '' : 's'} skipped`
       : '';
-    if (res.status === 'shared') toast(`Shared ✓${skipNote}`);
-    else if (res.status === 'downloaded') toast(`JSON file downloaded ✓${skipNote}`);
+    if (res.status === 'shared') toast(`Shared âœ“${skipNote}`);
+    else if (res.status === 'downloaded') toast(`JSON file downloaded âœ“${skipNote}`);
     else if (res.status === 'empty')
-      toast('Only protected cards selected — unlock the vault first');
+      toast('Only protected cards selected â€” unlock the vault first');
     if (res.status !== 'cancelled') cancelSelect();
   }
 
@@ -207,7 +181,7 @@
     if (openFolder) {
       list = list.filter((i) => i.folderId === openFolder.id);
     } else if (tab === 'folder') {
-      // The Folders tab shows folders only — no loose cards
+      // The Folders tab shows folders only â€” no loose cards
       return [];
     } else {
       // Cards inside folders live ONLY inside their folder while browsing.
@@ -236,7 +210,7 @@
   });
 
   const visibleFolders = $derived.by(() => {
-    // Folders live in their own tab — a dedicated home for all of them
+    // Folders live in their own tab â€” a dedicated home for all of them
     if (openFolder || tab !== 'folder') return [];
     let fs = vault.folders;
     const q = query.trim().toLowerCase();
@@ -263,7 +237,7 @@
   const counts = $derived.by(() => {
     const journeyTypes = TABS_BY_WORLD.journey.map((t) => t.id);
     const c = {
-      // 'All' lives in Vault, so it counts Vault items only — Journey entries
+      // 'All' lives in Vault, so it counts Vault items only â€” Journey entries
       // (diary/goal/task) have their own tabs and stay out of this total.
       all: vault.items.filter((i) => !journeyTypes.includes(i.type)).length,
       image: 0,
@@ -335,29 +309,31 @@
         </button>
       </div>
     {:else}
-      <!-- Grabber handle + drag zone: pull down to reveal the world switcher -->
-      <!-- svelte-ignore a11y_no_static_element_interactions -->
-      <div
-        class="touch-none px-4 pt-1"
-        onpointerdown={onSwipeStart}
-        onpointermove={onSwipeMove}
-        onpointerup={onSwipeEnd}
-        onpointercancel={onSwipeEnd}
-      >
+      <!-- Tap the chevron pill to reveal / hide the Vault â†” Journey switcher.
+           Shows the current world so you always know where you stand, and the
+           rotating arrow signals there's more to open. -->
+      <div class="px-4 pt-1">
         <button
-          class="mx-auto flex h-6 w-full items-center justify-center"
-          aria-label={switcherOpen ? 'Hide Vault and Journey' : 'Show Vault and Journey'}
-          onclick={() => {
-            if (dragY === baseY) { switcherOpen = !switcherOpen; tapFeedback(); }
-          }}
+          class="mx-auto flex h-7 items-center gap-1.5 rounded-full border border-line bg-card px-3
+            text-[12px] font-semibold text-ink-soft transition-colors active:bg-line"
+          aria-label={switcherOpen ? 'Hide Vault and Journey switcher' : 'Show Vault and Journey switcher'}
+          aria-expanded={switcherOpen}
+          onclick={toggleSwitcher}
         >
-          <span class="h-1 w-9 rounded-full bg-line transition-colors"></span>
+          <span>{world === 'journey' ? 'Journey' : 'Vault'}</span>
+          <svg
+            width="14" height="14" viewBox="0 0 24 24" fill="none"
+            stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"
+            class="transition-transform duration-300 {switcherOpen ? 'rotate-180' : ''}"
+          >
+            <path d="m6 9 6 6 6-6" />
+          </svg>
         </button>
       </div>
 
-      <!-- World switcher: Vault (collect) ↔ Journey (grow). Follows finger. -->
+      <!-- World switcher: Vault (collect) â†” Journey (grow). -->
       <div
-        class="overflow-hidden px-4 {dragging ? '' : 'transition-all duration-300 ease-out'}"
+        class="overflow-hidden px-4 transition-all duration-300 ease-out"
         style="height: {switcherH}px; opacity: {switcherH / SWITCHER_H}; margin-bottom: {switcherH > 0 ? '0.625rem' : '0'};"
       >
         <div class="flex gap-1 rounded-2xl border border-line bg-paper p-1">
@@ -459,7 +435,7 @@
     {/if}
 
     {#if !vault.loaded}
-      <p class="py-16 text-center text-sm text-ink-soft">Opening your kaban…</p>
+      <p class="py-16 text-center text-sm text-ink-soft">Opening your kabanâ€¦</p>
     {:else if filtered.length === 0 && !visibleFolders.length}
       <div class="flex flex-col items-center gap-3 py-20 text-center">
         <div
@@ -473,7 +449,7 @@
         </div>
         {#if query}
           <p class="text-sm text-ink-soft">
-            No results for “{query}”. Try another keyword.
+            No results for â€œ{query}â€. Try another keyword.
           </p>
         {:else if tab === 'folder'}
           <p class="font-display text-lg font-semibold">No folders yet</p>
@@ -485,11 +461,11 @@
           <p class="font-display text-lg font-semibold">Empty folder</p>
           <p class="max-w-[260px] text-sm text-ink-soft">
             Tap <span class="font-semibold text-teal">+</span> to add a card here,
-            or edit an existing card and set its Folder to “{openFolder.name}”.
+            or edit an existing card and set its Folder to â€œ{openFolder.name}â€.
           </p>
         {:else if visibleFolders.length}
           <p class="max-w-[240px] text-sm text-ink-soft">
-            No cards here yet — tap <span class="font-semibold text-teal">+</span> to add one.
+            No cards here yet â€” tap <span class="font-semibold text-teal">+</span> to add one.
           </p>
         {:else if world === 'journey'}
           {#if tab === 'diary'}
@@ -716,7 +692,7 @@
           <circle cx="18" cy="5" r="3" /><circle cx="6" cy="12" r="3" /><circle cx="18" cy="19" r="3" />
           <path d="m8.6 13.5 6.8 4M15.4 6.5l-6.8 4" />
         </svg>
-        {sharing ? '…' : 'Share'}
+        {sharing ? 'â€¦' : 'Share'}
       </button>
     </div>
   {/if}
