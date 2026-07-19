@@ -92,6 +92,33 @@ html {
   --color-teal-soft: #3a281c;
 }
 
+/* ============================================================
+   PALETTE: Jungle & Olive   (data-palette="jungle")
+   Deep jungle green accent (#07553B) app-wide, with light olive
+   (#CED46A) as the soft highlight. Dark mode drops onto deep forest
+   surfaces. The accent stays dark enough that white button labels
+   remain readable; olive is used for tints, not for white-on text.
+   ============================================================ */
+
+/* Light base + jungle-green accent + olive soft tint */
+[data-palette='jungle'] {
+  --color-ink: #0e3325;
+  --color-ink-soft: #4f6d60;
+  --color-teal: #07553b;
+  --color-teal-soft: #e4edb0;
+}
+
+/* Dark: deep forest surfaces + brighter jungle accent */
+[data-palette='jungle'][data-theme='dark'] {
+  --color-paper: #06231a;
+  --color-card: #0c3627;
+  --color-ink: #eef3ea;
+  --color-ink-soft: #93b0a2;
+  --color-line: #1c4a38;
+  --color-teal: #0a6a47;
+  --color-teal-soft: #22331a;
+}
+
 body {
   transition: background-color 0.2s ease, color 0.2s ease;
 }
