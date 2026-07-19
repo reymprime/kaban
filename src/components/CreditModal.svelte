@@ -3,6 +3,9 @@
   let { onclose } = $props();
 
   const version = 'v40';
+  // Lives in /public, so it resolves under the app's base path on GitHub Pages.
+  const forestSrc = import.meta.env.BASE_URL + 'credit-forest.jpg';
+  let imgOk = $state(true); // fall back to the solid banner if it fails to load
 
   function onBackdrop(e) {
     if (e.target === e.currentTarget) onclose();
@@ -21,18 +24,35 @@
     aria-modal="true"
     aria-label="About Kaban"
   >
-    <!-- Teal banner -->
-    <div class="flex flex-col items-center gap-2 bg-teal px-5 pb-5 pt-6">
-      <div class="flex h-14 w-14 items-center justify-center rounded-2xl bg-white/15">
-        <svg width="26" height="26" viewBox="0 0 24 24" fill="white">
-          <path
-            d="M12 3a6 6 0 0 0-2.4 11.5l-1.1 5.3a1 1 0 0 0 1 1.2h5a1 1 0 0 0 1-1.2l-1.1-5.3A6 6 0 0 0 12 3Zm0 3.5a2.5 2.5 0 1 1 0 5 2.5 2.5 0 0 1 0-5Z"
-          />
-        </svg>
-      </div>
-      <div>
-        <h2 class="font-display text-xl font-bold text-white">Kaban</h2>
-        <p class="text-[12px] font-medium text-white/70">Personal Vault · {version}</p>
+    <!-- Forest banner: a nature photo behind a dark-green wash so the white
+         text stays readable. Falls back to the solid teal header if the
+         image is missing (e.g. before it's added to /public). -->
+    <div class="relative overflow-hidden bg-teal px-5 pb-5 pt-6">
+      {#if imgOk}
+        <img
+          src={forestSrc}
+          alt=""
+          aria-hidden="true"
+          class="pointer-events-none absolute inset-0 h-full w-full object-cover"
+          onerror={() => (imgOk = false)}
+        />
+      {/if}
+      <div
+        class="pointer-events-none absolute inset-0"
+        style="background: linear-gradient(to bottom, rgba(6,35,26,0.45), rgba(6,35,26,0.78));"
+      ></div>
+      <div class="relative flex flex-col items-center gap-2">
+        <div class="flex h-14 w-14 items-center justify-center rounded-2xl bg-white/15 shadow-lg ring-1 ring-white/20 backdrop-blur-sm">
+          <svg width="26" height="26" viewBox="0 0 24 24" fill="white">
+            <path
+              d="M12 3a6 6 0 0 0-2.4 11.5l-1.1 5.3a1 1 0 0 0 1 1.2h5a1 1 0 0 0 1-1.2l-1.1-5.3A6 6 0 0 0 12 3Zm0 3.5a2.5 2.5 0 1 1 0 5 2.5 2.5 0 0 1 0-5Z"
+            />
+          </svg>
+        </div>
+        <div>
+          <h2 class="font-display text-xl font-bold text-white drop-shadow">Kaban</h2>
+          <p class="text-[12px] font-medium text-white/80 drop-shadow">Personal Vault &middot; {version}</p>
+        </div>
       </div>
     </div>
 
