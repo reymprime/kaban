@@ -23,7 +23,7 @@
   } = $props();
 
   // Long-press detection (500ms) to enter selection mode.
-  // Uses a movement threshold — fingers naturally jitter a few pixels,
+  // Uses a movement threshold â€” fingers naturally jitter a few pixels,
   // so only real movement (scrolling) cancels the press.
   let pressTimer = null;
   let startX = 0;
@@ -49,8 +49,8 @@
   function pressCancel() {
     clearTimeout(pressTimer);
   }
-  // Swipe RIGHT on a Stored Link card → reveal its Linked Notes.
-  // Swipe left while the panel is open → put it away.
+  // Swipe RIGHT on a Stored Link card â†’ reveal its Linked Notes.
+  // Swipe left while the panel is open â†’ put it away.
   let swipeFired = false;
   function pressEnd(e) {
     pressCancel();
@@ -91,7 +91,7 @@
   const platform = $derived(
     item.type === 'link' && accessible ? detectPlatform(contentText) : null
   );
-  // YouTube links get a Watch button — null for everything else hides it
+  // YouTube links get a Watch button â€” null for everything else hides it
   const ytId = $derived(
     item.type === 'link' && accessible ? getYouTubeId(contentText) : null
   );
@@ -142,12 +142,12 @@
   }
 
   function notePreview(n) {
-    if (n.protected) return 'Protected — encrypted note';
+    if (n.protected) return 'Protected â€” encrypted note';
     return htmlToText(n.content).slice(0, 80);
   }
   // Links lose copy access when locked; prompts and notes keep copy
   const copyBlocked = $derived(locked && item.type === 'link');
-  // Rich notes are stored as HTML — preview and copy use plain text
+  // Rich notes are stored as HTML â€” preview and copy use plain text
   const noteText = $derived(item.type === 'note' ? htmlToText(contentText) : '');
   const diaryText = $derived(item.type === 'diary' ? htmlToText(contentText) : '');
   // Friendly entry date like "Mon, Jul 14"
@@ -180,7 +180,7 @@
   const taskC = $derived(item.type === 'task' ? taskCounts(item.tasks || []) : { done: 0, total: 0, left: 0 });
   const taskAllDone = $derived(item.type === 'task' && taskC.total > 0 && taskC.left === 0);
 
-  // Lock icon animation — re-keyed to replay CSS animation each press
+  // Lock icon animation â€” re-keyed to replay CSS animation each press
   let anim = $state({ n: 0, type: '' });
 
   function promptUnlock() {
@@ -199,14 +199,14 @@
     const turningOn = !item.protected;
     await setProtection(item, turningOn);
     anim = { n: anim.n + 1, type: 'lock-pop' };
-    toast(turningOn ? 'Protected — encrypted with your vault password' : 'Protection removed');
+    toast(turningOn ? 'Protected â€” encrypted with your vault password' : 'Protection removed');
   }
 
   async function handleCopy() {
     if (!accessible) return promptUnlock();
     if (copyBlocked) return denied();
     const ok = await copyText(item.type === 'note' ? noteText : contentText);
-    toast(ok ? 'Copied to clipboard ✓' : 'Copy failed — try again');
+    toast(ok ? 'Copied to clipboard âœ“' : 'Copy failed â€” try again');
   }
 
   async function handlePin() {
@@ -219,19 +219,19 @@
     const nowLocked = !item.locked;
     await toggleLock(item);
     anim = { n: anim.n + 1, type: 'lock-pop' };
-    toast(nowLocked ? 'Locked — protected from changes' : 'Unlocked');
+    toast(nowLocked ? 'Locked â€” protected from changes' : 'Unlocked');
   }
 
   function denied() {
     anim = { n: anim.n + 1, type: 'lock-shake' };
-    toast('Locked — unlock first to get access');
+    toast('Locked â€” unlock first to get access');
   }
 </script>
 
 <li
   class="relative flex flex-col overflow-hidden rounded-2xl border bg-card transition-[scale,box-shadow] duration-100 active:scale-[0.99]
     {isSelected ? 'border-teal shadow-[0_0_0_2px_var(--color-teal)]' : locked ? 'border-ink/15' : 'border-line'}"
-  style="border-left: 4px solid {isSelected ? 'var(--color-teal)' : cat.color}; touch-action: pan-y;"
+  style="border-left: 4px solid {isSelected ? 'var(--color-teal)' : cat.color}; --cat: {isSelected ? 'var(--color-teal)' : cat.color}; touch-action: pan-y;"
   onpointerdown={pressStart}
   onpointerup={pressEnd}
   onpointermove={pressMove}
@@ -278,7 +278,7 @@
             <span
               class="flex items-center gap-0.5 rounded-md px-1.5 py-0.5 text-[10px] font-semibold"
               style="background: {cat.soft}; color: {cat.color};"
-              aria-label="{linkedNotes.length} linked notes — swipe right to view"
+              aria-label="{linkedNotes.length} linked notes â€” swipe right to view"
             >
               <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                 <path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7" />
@@ -365,7 +365,7 @@
         </svg>
         <div>
           <p class="text-[13px] font-semibold text-ink">Protected</p>
-          <p class="text-[11px] text-ink-soft">Content is encrypted — unlock the vault to view</p>
+          <p class="text-[11px] text-ink-soft">Content is encrypted â€” unlock the vault to view</p>
         </div>
       </div>
     {:else if item.type === 'link'}
@@ -400,7 +400,7 @@
           </div>
         {/if}
         <p class="clamp-3 whitespace-pre-wrap text-[13px] leading-relaxed text-ink-soft">
-          {diaryText || 'Empty entry — tap to write'}
+          {diaryText || 'Empty entry â€” tap to write'}
         </p>
         <span class="mt-1 inline-flex items-center gap-1 text-[12px] font-semibold" style="color: var(--color-cat-diary);">
           Open entry
@@ -414,7 +414,7 @@
         <div class="mb-2 flex items-center justify-between">
           <span class="font-display text-xl font-bold" style="color: var(--color-cat-goal);">{goalPct}%</span>
           {#if goalDone}
-            <span class="rounded-full px-2 py-0.5 text-[11px] font-bold text-white" style="background: var(--color-cat-goal);">Achieved 🎉</span>
+            <span class="rounded-full px-2 py-0.5 text-[11px] font-bold text-white" style="background: var(--color-cat-goal);">Achieved ðŸŽ‰</span>
           {:else}
             <span class="text-[12px] font-semibold" style="color: {goalToneColor};">{goalCountdown}</span>
           {/if}
@@ -436,7 +436,7 @@
               {taskC.done}/{taskC.total} done
             </span>
             {#if taskAllDone}
-              <span class="rounded-full px-2 py-0.5 text-[11px] font-bold text-white" style="background: var(--color-cat-task);">All clear 🎉</span>
+              <span class="rounded-full px-2 py-0.5 text-[11px] font-bold text-white" style="background: var(--color-cat-task);">All clear ðŸŽ‰</span>
             {:else}
               <span class="text-[12px] text-ink-soft">{taskC.left} left</span>
             {/if}
@@ -445,7 +445,7 @@
             <div class="h-full rounded-full transition-all duration-500" style="width: {taskPct}%; background: linear-gradient(90deg, var(--color-cat-task), #22d3ee);"></div>
           </div>
         {:else}
-          <p class="text-[13px] text-ink-soft">Empty list — tap to add tasks</p>
+          <p class="text-[13px] text-ink-soft">Empty list â€” tap to add tasks</p>
         {/if}
       </button>
     {:else}
@@ -621,7 +621,7 @@
         </ul>
       {:else}
         <p class="flex flex-1 items-center justify-center px-6 py-4 text-center text-[12px] text-ink-soft">
-          No linked notes yet — open a note's writer and tap "Link to"
+          No linked notes yet â€” open a note's writer and tap "Link to"
         </p>
       {/if}
     </div>
