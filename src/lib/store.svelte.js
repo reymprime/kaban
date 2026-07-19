@@ -15,6 +15,7 @@ export const vault = $state({
   appLockPrompt: null, // null | 'setup' | 'change' | 'disable'
   plain: {}, // id -> decrypted content while vault is unlocked (memory only)
   theme: 'auto', // 'auto' | 'light' | 'dark'
+  palette: 'default', // 'default' | 'pumpkin' - full color skin
   isDark: false,
   settings: { haptic: 'medium', sound: false, volume: 0.5 },
   stats: { days: {}, lastRecapAt: 0 },
@@ -37,7 +38,7 @@ export function toast(message) {
 
 export async function loadVault() {
   try {
-    const [items, folders, meta, themeMeta, settingsMeta, statsMeta, applockMeta] =
+    const [items, folders, meta, themeMeta, settingsMeta, statsMeta, applockMeta, paletteMeta] =
       await Promise.all([
         db.getAll(),
         db.getAllFolders(),
@@ -46,6 +47,7 @@ export async function loadVault() {
         db.getMeta('settings'),
         db.getMeta('stats'),
         db.getMeta('applock'),
+        db.getMeta('palette'),
       ]);
     vault.items = items;
     vault.folders = folders;
@@ -56,9 +58,11 @@ export async function loadVault() {
     vault.appLock.configured = !!applockMeta;
     vault.appLock.locked = !!applockMeta;
     vault.theme = themeMeta?.value || 'auto';
+    vault.palette = paletteMeta?.value || 'default';
     if (settingsMeta?.value) Object.assign(vault.settings, settingsMeta.value);
     if (statsMeta?.value) Object.assign(vault.stats, statsMeta.value);
     applyTheme();
+    applyPalette();
     // Each device keeps its own UI - phones stay portrait (installed app)
     lockPhoneToPortrait();
 
@@ -120,6 +124,17 @@ if (typeof window !== 'undefined') {
     });
 }
 
+// The browser chrome color (status bar / address bar) tracks both the
+// light/dark mode AND the active palette so it always matches the surface.
+function applyThemeColor(dark) {
+  const el = document.querySelector('meta[name="theme-color"]');
+  if (!el) return;
+  let color;
+  if (vault.palette === 'pumpkin') color = dark ? '#1B2E3A' : '#F6F7F9';
+  else color = dark ? '#0E1013' : '#F6F7F9';
+  el.setAttribute('content', color);
+}
+
 export function applyTheme() {
   const pref = vault.theme;
   const dark =
@@ -127,8 +142,25 @@ export function applyTheme() {
     (pref === 'auto' && window.matchMedia('(prefers-color-scheme: dark)').matches);
   vault.isDark = dark;
   document.documentElement.dataset.theme = dark ? 'dark' : 'light';
-  const meta = document.querySelector('meta[name="theme-color"]');
-  if (meta) meta.setAttribute('content', dark ? '#0E1013' : '#F6F7F9');
+  applyThemeColor(dark);
+}
+
+// Paint the chosen color skin. 'default' removes the attribute so the base
+// teal theme shows through; any other palette sets data-palette on <html>,
+// which the stylesheet uses to override the color tokens app-wide.
+export function applyPalette() {
+  const p = vault.palette || 'default';
+  if (p === 'default') delete document.documentElement.dataset.palette;
+  else document.documentElement.dataset.palette = p;
+  applyThemeColor(vault.isDark);
+}
+
+export async function setPalette(p) {
+  vault.palette = p;
+  applyPalette();
+  try {
+    await db.putMeta({ key: 'palette', value: p });
+  } catch {}
 }
 
 export async function setTheme(t, origin = null) {

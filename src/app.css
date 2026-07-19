@@ -1,7 +1,7 @@
 @import 'tailwindcss';
 
 @theme {
-  /* Kaban palette — clean light */
+  /* Kaban palette - clean light */
   --color-paper: #f6f7f9;
   --color-card: #ffffff;
   --color-ink: #16181d;
@@ -39,7 +39,7 @@ html {
   overscroll-behavior-y: none;
 }
 
-/* Dark mode — same tokens, darker values. Toggled via data-theme on <html>. */
+/* Dark mode - same tokens, darker values. Toggled via data-theme on <html>. */
 [data-theme='dark'] {
   --color-paper: #0e1013;
   --color-card: #171a20;
@@ -62,6 +62,34 @@ html {
   --color-cat-goal-soft: #0f2e24;
   --color-cat-task: #22d3ee;
   --color-cat-task-soft: #0c2b33;
+}
+
+/* ============================================================
+   PALETTE: Pumpkin & Charcoal   (data-palette="pumpkin")
+   A full alternate skin, selectable in Settings. It re-tints the
+   accent to pumpkin app-wide and, in dark mode, swaps the near-black
+   surfaces for charcoal. The category colors (image/video/link/note)
+   are left untouched so cards stay readable. Layers on top of
+   light/dark exactly like the base theme, via data-palette on <html>.
+   ============================================================ */
+
+/* Light base + pumpkin accent + charcoal ink */
+[data-palette='pumpkin'] {
+  --color-ink: #233d4c;
+  --color-ink-soft: #5c7280;
+  --color-teal: #fd802e;
+  --color-teal-soft: #ffe3ce;
+}
+
+/* Dark: charcoal surfaces from the palette + pumpkin accent */
+[data-palette='pumpkin'][data-theme='dark'] {
+  --color-paper: #1b2e3a;
+  --color-card: #233d4c;
+  --color-ink: #f2ece6;
+  --color-ink-soft: #9db0bc;
+  --color-line: #33505f;
+  --color-teal: #fd802e;
+  --color-teal-soft: #3a281c;
 }
 
 body {
@@ -206,7 +234,7 @@ textarea {
   caret-color: var(--color-teal);
 }
 .rich-editor:empty::before {
-  content: 'Just write…';
+  content: 'Just write...';
   color: color-mix(in srgb, var(--color-ink-soft) 60%, transparent);
 }
 
@@ -258,7 +286,7 @@ textarea {
   outline-offset: 2px;
 }
 
-/* Instant press-down reaction on every button — uses the standalone `scale`
+/* Instant press-down reaction on every button - uses the standalone `scale`
    property so it never conflicts with translate-based positioning */
 button {
   transition: scale 0.1s ease;
@@ -287,8 +315,8 @@ button:active {
 }
 
 /* ---- Responsive shell ----
-   Portrait phones keep the cozy single column. Anything wider —
-   landscape phones, tablets, laptops — the shell EATS the whole
+   Portrait phones keep the cozy single column. Anything wider -
+   landscape phones, tablets, laptops - the shell EATS the whole
    screen (capped at 80rem on huge monitors so cards never balloon).
    Pure CSS, so it re-adapts instantly on resize or rotation. */
 :root {
@@ -311,8 +339,8 @@ button:active {
 
 /* ---- Auto-fill grids ----
    The grid decides the column count from the available width:
-   1 col on portrait phones, 2 on landscape, 3–4 on laptops.
-   No breakpoints to outgrow — it just fills whatever space exists. */
+   1 col on portrait phones, 2 on landscape, 3-4 on laptops.
+   No breakpoints to outgrow - it just fills whatever space exists. */
 .card-grid {
   display: grid;
   gap: 0.75rem;
@@ -324,7 +352,7 @@ button:active {
   grid-template-columns: repeat(auto-fill, minmax(min(100%, 16rem), 1fr));
 }
 
-/* Tutorial spotlight — a hole punched through the dark overlay */
+/* Tutorial spotlight - a hole punched through the dark overlay */
 .tour-spot {
   box-shadow: 0 0 0 9999px rgb(0 0 0 / 0.65);
   pointer-events: none;
