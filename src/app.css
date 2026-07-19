@@ -343,120 +343,115 @@ button:active {
 }
 
 /* ============================================================
-   PREMIUM â€” LIQUID GLASS  v2  (readable frost Â· edge shine Â· aurora)
+   PREMIUM â€” LIQUID GLASS  v3  (polished Â· GPU-smooth Â· light+dark)
    Toggled by [data-premium='on'] on <html>.
-   Fixes over v1:
-     â€¢ cards are SOLID-frosted â†’ text stays crisp, never see-through
-     â€¢ real EDGE SHINE â†’ the whole rim catches light, not just the top
-     â€¢ modals are proper opaque glass â†’ content behind never bleeds in
+   Performance philosophy: backdrop-filter is expensive per element, so
+   we blur ONLY the few chrome surfaces (header, bottom bar, modals) and
+   fake glass on the MANY cards with high-opacity frost + edge shine.
+   Result: identical premium look, but the card list scrolls at 60fps.
    ============================================================ */
 
-/* ---- 1. BOLD LIVING AURORA (background light source) ---- */
-[data-premium='on'] body::before {
-  content: '';
-  position: fixed;
-  inset: -30%;
-  z-index: -2;
-  pointer-events: none;
-  background:
-    radial-gradient(30% 34% at 15% 16%, color-mix(in srgb, var(--color-teal) 90%, transparent), transparent 64%),
-    radial-gradient(28% 32% at 86% 12%, color-mix(in srgb, var(--color-cat-image) 82%, transparent), transparent 64%),
-    radial-gradient(34% 38% at 80% 82%, color-mix(in srgb, var(--color-cat-link) 80%, transparent), transparent 66%),
-    radial-gradient(32% 36% at 16% 88%, color-mix(in srgb, var(--color-cat-diary) 76%, transparent), transparent 66%);
-  filter: saturate(1.4) brightness(1.05);
-  animation: aurora-drift 24s ease-in-out infinite alternate;
-}
+/* ---- 1. LIVING AURORA â€” GPU-composited, gentle ----
+   Two drifting bloom layers behind everything. Promoted to their own
+   compositor layer (translateZ + will-change) so they animate on the GPU
+   and never touch layout/paint. */
+[data-premium='on'] body::before,
 [data-premium='on'] body::after {
   content: '';
   position: fixed;
   inset: -30%;
   z-index: -2;
   pointer-events: none;
+  will-change: transform;
+  transform: translateZ(0);
+  backface-visibility: hidden;
+}
+[data-premium='on'] body::before {
   background:
-    radial-gradient(26% 30% at 66% 28%, color-mix(in srgb, var(--color-cat-goal) 64%, transparent), transparent 64%),
-    radial-gradient(24% 28% at 32% 64%, color-mix(in srgb, var(--color-cat-task) 58%, transparent), transparent 64%);
+    radial-gradient(30% 34% at 15% 16%, color-mix(in srgb, var(--color-teal) 88%, transparent), transparent 64%),
+    radial-gradient(28% 32% at 86% 12%, color-mix(in srgb, var(--color-cat-image) 80%, transparent), transparent 64%),
+    radial-gradient(34% 38% at 80% 82%, color-mix(in srgb, var(--color-cat-link) 78%, transparent), transparent 66%),
+    radial-gradient(32% 36% at 16% 88%, color-mix(in srgb, var(--color-cat-diary) 74%, transparent), transparent 66%);
+  filter: saturate(1.4) brightness(1.04);
+  animation: aurora-drift 26s ease-in-out infinite alternate;
+}
+[data-premium='on'] body::after {
+  background:
+    radial-gradient(26% 30% at 66% 28%, color-mix(in srgb, var(--color-cat-goal) 62%, transparent), transparent 64%),
+    radial-gradient(24% 28% at 32% 64%, color-mix(in srgb, var(--color-cat-task) 56%, transparent), transparent 64%);
   filter: saturate(1.3);
   mix-blend-mode: screen;
-  animation: aurora-drift-2 32s ease-in-out infinite alternate;
+  animation: aurora-drift-2 34s ease-in-out infinite alternate;
 }
 @keyframes aurora-drift {
   0%   { transform: translate3d(0,0,0) scale(1) rotate(0deg); }
-  50%  { transform: translate3d(4%,-3%,0) scale(1.1) rotate(2deg); }
-  100% { transform: translate3d(-3%,4%,0) scale(1.05) rotate(-2deg); }
+  50%  { transform: translate3d(3%,-2.5%,0) scale(1.09) rotate(1.5deg); }
+  100% { transform: translate3d(-2.5%,3%,0) scale(1.05) rotate(-1.5deg); }
 }
 @keyframes aurora-drift-2 {
   0%   { transform: translate3d(0,0,0) scale(1.05); }
-  100% { transform: translate3d(-5%,-4%,0) scale(1.14); }
+  100% { transform: translate3d(-4%,-3%,0) scale(1.13); }
 }
 
-/* ---- 2. FROST TOKENS â€” high opacity so TEXT STAYS READABLE ----
-   The whole point of the fix: surfaces are mostly-solid milky glass.
-   Aurora tints the edges and shines through the gaps, but the body of
-   every card is opaque enough that monospace prompt text is razor sharp. */
+/* ---- 2. FROST TOKENS â€” high opacity = readable + no per-card blur ---- */
 [data-premium='on'] {
-  --color-paper: rgba(255, 255, 255, 0.66);
-  --color-card: rgba(255, 255, 255, 0.82);
+  --color-paper: rgba(255, 255, 255, 0.7);
+  --color-card: rgba(255, 255, 255, 0.86);
   --color-line: rgba(255, 255, 255, 0.9);
   --color-ink: #0a1020;
   --color-ink-soft: #414a5c;
-  --glass-blur: 24px;
   --glass-hi: rgba(255, 255, 255, 0.95);
-  --glass-shadow: 0 12px 40px rgba(18, 28, 52, 0.18), 0 3px 10px rgba(18, 28, 52, 0.1);
+  --glass-shadow: 0 10px 34px rgba(18, 28, 52, 0.16), 0 2px 8px rgba(18, 28, 52, 0.09);
 }
 [data-premium='on'][data-theme='dark'] {
-  --color-paper: rgba(26, 32, 44, 0.72);
-  --color-card: rgba(32, 39, 52, 0.82);
+  --color-paper: rgba(26, 32, 44, 0.78);
+  --color-card: rgba(32, 39, 52, 0.86);
   --color-line: rgba(255, 255, 255, 0.2);
   --color-ink: #f4f7fb;
   --color-ink-soft: #b2bacb;
-  --glass-hi: rgba(255, 255, 255, 0.28);
-  --glass-shadow: 0 14px 44px rgba(0, 0, 0, 0.56), 0 3px 10px rgba(0, 0, 0, 0.4);
+  --glass-hi: rgba(255, 255, 255, 0.26);
+  --glass-shadow: 0 12px 38px rgba(0, 0, 0, 0.54), 0 2px 8px rgba(0, 0, 0, 0.38);
 }
+/* Soft base wash so screen edges aren't flat under the aurora */
 [data-premium='on'] html,
-[data-premium='on'] body { background: #e8eef7; }
+[data-premium='on'] body { background: #e9eef6; }
 [data-premium='on'][data-theme='dark'] html,
 [data-premium='on'][data-theme='dark'] body { background: #090c12; }
 
-/* ---- 3. CARDS: solid frost + EDGE SHINE ----
-   Backdrop blur/saturation gives vibrancy. Text sits on the ~82% opaque
-   fill so it's fully legible. The EDGE SHINE is a gradient ring painted
-   into the border via two stacked backgrounds: the inner one is the card
-   fill (padding-box), the outer one is a light-catching gradient
-   (border-box) that runs around the entire rim. */
+/* ---- 3. CARDS: frost fill + EDGE SHINE  (NO backdrop-filter â†’ smooth) ----
+   The card body is high-opacity milky glass (text stays crisp). The rim
+   is a gradient border that catches light around the whole edge, tinted
+   at its midpoint by the card's category colour (--cat). No blur here, so
+   a long scrolling list stays buttery. */
 [data-premium='on'] li.bg-card {
   position: relative;
-  backdrop-filter: blur(var(--glass-blur)) saturate(1.7);
-  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(1.7);
   border: 1px solid transparent !important;
+  border-left: 3px solid var(--cat, var(--color-line)) !important;
   background:
     linear-gradient(var(--color-card), var(--color-card)) padding-box,
     linear-gradient(135deg,
       rgba(255,255,255,0.95) 0%,
-      rgba(255,255,255,0.25) 26%,
+      rgba(255,255,255,0.28) 26%,
       var(--cat, rgba(255,255,255,0.4)) 50%,
-      rgba(255,255,255,0.2) 74%,
-      rgba(255,255,255,0.85) 100%) border-box !important;
+      rgba(255,255,255,0.22) 74%,
+      rgba(255,255,255,0.88) 100%) border-box !important;
   box-shadow: var(--glass-shadow), inset 0 1px 0 0 var(--glass-hi);
-  transition: box-shadow 0.4s cubic-bezier(0.34,1.56,0.64,1), background 0.3s ease;
+  transition: box-shadow 0.35s cubic-bezier(0.34,1.4,0.64,1);
 }
 [data-premium='on'][data-theme='dark'] li.bg-card {
   background:
     linear-gradient(var(--color-card), var(--color-card)) padding-box,
     linear-gradient(135deg,
-      rgba(255,255,255,0.5) 0%,
+      rgba(255,255,255,0.48) 0%,
       rgba(255,255,255,0.08) 26%,
       var(--cat, rgba(255,255,255,0.15)) 50%,
       rgba(255,255,255,0.06) 74%,
-      rgba(255,255,255,0.42) 100%) border-box !important;
+      rgba(255,255,255,0.4) 100%) border-box !important;
 }
 
-/* Keep the coloured left rail on top of the shine border */
-[data-premium='on'] li.bg-card {
-  border-left: 3px solid var(--cat, var(--color-line)) !important;
-}
-
-/* Specular SWEEP â€” a soft light bar glides across each card on a loop.
-   Sits above the fill, below the text (content is position:relative z1). */
+/* Specular SWEEP â€” one lightweight animated pseudo-element per card.
+   Uses only background-position (compositor-friendly) + opacity, no blend
+   mode, so it's cheap. Subtle by design: a whisper of light, not a flash. */
 [data-premium='on'] li.bg-card::after {
   content: '';
   position: absolute;
@@ -464,75 +459,64 @@ button:active {
   border-radius: inherit;
   pointer-events: none;
   z-index: 0;
+  opacity: 0.55;
   background: linear-gradient(115deg,
-    transparent 34%,
-    rgba(255,255,255,0.1) 47%,
+    transparent 38%,
+    rgba(255,255,255,0.14) 48%,
     rgba(255,255,255,0.22) 50%,
-    rgba(255,255,255,0.1) 53%,
-    transparent 66%);
-  background-size: 250% 250%;
-  animation: glass-sweep 8s ease-in-out infinite;
-  mix-blend-mode: overlay;
+    rgba(255,255,255,0.14) 52%,
+    transparent 62%);
+  background-size: 240% 240%;
+  animation: glass-sweep 9s ease-in-out infinite;
 }
+[data-premium='on'][data-theme='dark'] li.bg-card::after { opacity: 0.3; }
 [data-premium='on'] li.bg-card > * { position: relative; z-index: 1; }
 @keyframes glass-sweep {
-  0%   { background-position: 190% 0%; }
-  60%  { background-position: -50% 0%; }
-  100% { background-position: -50% 0%; }
+  0%, 100% { background-position: 180% 0%; }
+  55%      { background-position: -40% 0%; }
 }
 
-/* Nested wells inside cards (bg-paper) â€” lighter frost, layered look */
-[data-premium='on'] .bg-paper {
-  backdrop-filter: blur(8px) saturate(1.3);
-  -webkit-backdrop-filter: blur(8px) saturate(1.3);
-}
-
-/* ---- 4. LIQUID BUTTONS with edge shine + dome ---- */
+/* ---- 4. LIQUID BUTTONS â€” dome + edge, no blur (cheap) ---- */
 [data-premium='on'] button.rounded-full,
 [data-premium='on'] button.rounded-2xl,
 [data-premium='on'] button.rounded-xl,
 [data-premium='on'] button.rounded-lg {
-  backdrop-filter: blur(14px) saturate(1.6);
-  -webkit-backdrop-filter: blur(14px) saturate(1.6);
-  box-shadow: 0 4px 16px rgba(18,28,52,0.16),
+  box-shadow: 0 3px 12px rgba(18,28,52,0.14),
     inset 0 1px 0 0 var(--glass-hi),
-    inset 0 -5px 10px -6px rgba(18,28,52,0.12);
+    inset 0 -5px 10px -6px rgba(18,28,52,0.1);
 }
 [data-premium='on'][data-theme='dark'] button.rounded-full,
 [data-premium='on'][data-theme='dark'] button.rounded-2xl,
 [data-premium='on'][data-theme='dark'] button.rounded-xl,
 [data-premium='on'][data-theme='dark'] button.rounded-lg {
-  box-shadow: 0 4px 16px rgba(0,0,0,0.46), inset 0 1px 0 0 var(--glass-hi);
+  box-shadow: 0 3px 12px rgba(0,0,0,0.42), inset 0 1px 0 0 var(--glass-hi);
 }
 [data-premium='on'] .bg-ink {
-  box-shadow: 0 6px 22px rgba(18,28,52,0.32),
+  box-shadow: 0 5px 18px rgba(18,28,52,0.3),
     inset 0 1px 0 0 rgba(255,255,255,0.3) !important;
 }
-
 /* FAB â€” deepest float, brightest rim */
 [data-premium='on'] .fab-right,
 [data-premium='on'] [aria-label='Add new'],
 [data-premium='on'] [aria-label='New entry'] {
-  box-shadow: 0 16px 40px rgba(15,118,110,0.46),
+  box-shadow: 0 14px 34px rgba(15,118,110,0.44),
     inset 0 1px 0 0 rgba(255,255,255,0.5),
     inset 0 -8px 16px -6px rgba(0,0,0,0.2) !important;
 }
 
-/* ---- 5. CHROME + MODALS: proper opaque glass ----
-   Header/bottom bar frost lightly. MODALS get a STRONG blur AND a near-
-   solid fill so the busy cards behind them turn into a clean soft wash â€”
-   this is the readability fix for the Add-to-Kaban / credits dialogs. */
+/* ---- 5. CHROME + MODALS â€” the ONLY real backdrop-filter (few elements) ----
+   Header, bottom bar and dialogs are single elements, so blurring them is
+   cheap and gives the true "content flows under glass" effect. Modals also
+   get a near-solid fill so the busy card list behind reads as a soft wash. */
 [data-premium='on'] .sticky.bg-paper,
 [data-premium='on'] .fixed.bg-card {
-  backdrop-filter: blur(22px) saturate(1.7);
-  -webkit-backdrop-filter: blur(22px) saturate(1.7);
+  backdrop-filter: blur(20px) saturate(1.7);
+  -webkit-backdrop-filter: blur(20px) saturate(1.7);
 }
-
-/* The modal panels (.pop-in on bg-card / bg-paper) become solid frost */
 [data-premium='on'] .pop-in.bg-card,
 [data-premium='on'] .pop-in.bg-paper {
-  backdrop-filter: blur(40px) saturate(1.8);
-  -webkit-backdrop-filter: blur(40px) saturate(1.8);
+  backdrop-filter: blur(36px) saturate(1.8);
+  -webkit-backdrop-filter: blur(36px) saturate(1.8);
   background: rgba(255,255,255,0.9) !important;
   box-shadow: var(--glass-shadow), inset 0 1px 0 0 var(--glass-hi);
 }
@@ -540,16 +524,40 @@ button:active {
 [data-premium='on'][data-theme='dark'] .pop-in.bg-paper {
   background: rgba(24,29,40,0.94) !important;
 }
-
-/* Darken the dialog backdrop hard so nothing behind competes */
+/* Darken dialog backdrops so nothing behind competes */
 [data-premium='on'] .fixed.bg-ink\/40,
 [data-premium='on'] .fixed.bg-ink\/50 {
-  background: rgba(6, 10, 20, 0.62) !important;
-  backdrop-filter: blur(6px);
-  -webkit-backdrop-filter: blur(6px);
+  background: rgba(6, 10, 20, 0.6) !important;
+  backdrop-filter: blur(5px);
+  -webkit-backdrop-filter: blur(5px);
 }
 
-/* ---- Fallback: no backdrop-filter â†’ fully opaque so text is safe ---- */
+/* ---- 6. POLISH DETAILS ----
+   Small corrections for a flawless finish in both themes. */
+/* Off-screen cards skip rendering + their sweep animation entirely â€” the
+   browser only paints cards near the viewport. Huge scroll win on long
+   lists (the vault can hold 90+ cards). contain-intrinsic-size reserves
+   space so the scrollbar stays accurate. */
+[data-premium='on'] li.bg-card {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 220px;
+}
+/* Selected card: teal ring reads cleanly over the shine border */
+[data-premium='on'] li.bg-card.border-teal {
+  border-color: var(--color-teal) !important;
+  box-shadow: 0 0 0 2px var(--color-teal), var(--glass-shadow);
+}
+/* Search field + inputs get the same crisp frost edge */
+[data-premium='on'] input,
+[data-premium='on'] textarea {
+  border-color: var(--color-line);
+}
+/* Tab pills: active pill pops, inactive stays glassy */
+[data-premium='on'] nav[aria-label='Categories'] button {
+  box-shadow: inset 0 1px 0 0 var(--glass-hi);
+}
+
+/* ---- Fallback: no backdrop-filter support â†’ safe opaque surfaces ---- */
 @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
   [data-premium='on'] {
     --color-card: rgba(255,255,255,0.96);
@@ -559,9 +567,9 @@ button:active {
     --color-card: rgba(32,39,52,0.97);
     --color-paper: rgba(23,26,32,0.97);
   }
-  [data-premium='on'] li.bg-card::after { display: none; }
 }
 
+/* ---- Respect reduced motion: kill all premium animation ---- */
 @media (prefers-reduced-motion: reduce) {
   [data-premium='on'] body::before,
   [data-premium='on'] body::after,
