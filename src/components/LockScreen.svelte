@@ -99,7 +99,7 @@
             fail('PINs did not match. Start again.');
           } else {
             await setupAppPin(pin);
-            toast('PIN lock is on âœ“');
+            toast('PIN lock is on');
             onclose?.();
           }
         }
@@ -122,7 +122,7 @@
             fail('PINs did not match. Start again.');
           } else {
             await setupAppPin(pin); // current already verified above
-            toast('PIN changed âœ“');
+            toast('PIN changed');
             onclose?.();
           }
         }
@@ -218,7 +218,7 @@
         </button>
       {/each}
 
-      <!-- bottom row: spacer Â· 0 Â· backspace -->
+      <!-- bottom row: spacer - 0 - backspace -->
       <span aria-hidden="true"></span>
 
       <button
@@ -244,8 +244,8 @@
 
     {#if mode === 'unlock'}
       <p class="mt-8 max-w-[260px] text-center text-[11px] leading-relaxed text-ink-soft">
-        Forgot your PIN? Your data stays on this device â€” reinstalling Kaban
-        clears the PIN but also erases your vault.
+        Forgot your PIN? Your data lives only on this device. Reinstalling
+        Kaban clears the PIN, but it also erases your vault.
       </p>
     {/if}
   </div>

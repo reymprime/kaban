@@ -51,7 +51,7 @@ export async function loadVault() {
     vault.folders = folders;
     securityMeta = meta;
     vault.security.configured = !!meta;
-    // App Lock â€” if a PIN was set, gate the whole app until it's entered.
+    // App Lock - if a PIN was set, gate the whole app until it's entered.
     appLockMeta = applockMeta;
     vault.appLock.configured = !!applockMeta;
     vault.appLock.locked = !!applockMeta;
@@ -59,7 +59,7 @@ export async function loadVault() {
     if (settingsMeta?.value) Object.assign(vault.settings, settingsMeta.value);
     if (statsMeta?.value) Object.assign(vault.stats, statsMeta.value);
     applyTheme();
-    // Each device keeps its own UI â€” phones stay portrait (installed app)
+    // Each device keeps its own UI - phones stay portrait (installed app)
     lockPhoneToPortrait();
 
     // ---- Weekly recap bookkeeping ----
@@ -79,7 +79,7 @@ export async function loadVault() {
     const tut = await db.getMeta('tutorial');
     if (!tut) vault.tutorialOpen = true;
 
-    // Time for a recap? (tutorial takes priority â€” recap waits for next visit)
+    // Time for a recap? (tutorial takes priority - recap waits for next visit)
     if (!vault.tutorialOpen && Date.now() - vault.stats.lastRecapAt >= WEEK) {
       vault.stats.lastRecapAt = Date.now();
       vault.recapOpen = true;
@@ -92,7 +92,7 @@ export async function loadVault() {
       if (!onboarded) {
         await saveItem({
           type: 'note',
-          title: 'Welcome to Kaban â€” Start Here',
+          title: 'Welcome to Kaban - Start Here',
           description: 'Your quick guide to the vault',
           content: WELCOME_HTML,
           tags: ['guide'],
@@ -110,7 +110,7 @@ export async function loadVault() {
 
 // ---- Theme ----
 
-// Follow the OS theme live while in 'auto' â€” fires when the system
+// Follow the OS theme live while in 'auto' - fires when the system
 // switches dark/light (night schedule, quick-settings toggle, etc.)
 if (typeof window !== 'undefined') {
   window
@@ -132,7 +132,7 @@ export function applyTheme() {
 }
 
 export async function setTheme(t, origin = null) {
-  // Instant theme switch â€” no wave animation (kept it simple and bug-free).
+  // Instant theme switch - no wave animation (kept it simple and bug-free).
   // `origin` is accepted for backward compatibility but no longer used.
   vault.theme = t;
   applyTheme();
@@ -205,10 +205,10 @@ export async function saveSettings(patch) {
 }
 
 // ---- Device-fit UI ----
-// Each device gets its own UI, permanently â€” no rotation adjustment:
-//   â€¢ Phone   â†’ portrait phone layout, locked
-//   â€¢ Tablet  â†’ tablet layout (fluid grid fits its width)
-//   â€¢ Computerâ†’ desktop layout (orientation doesn't apply)
+// Each device gets its own UI, permanently - no rotation adjustment:
+//   - Phone   -> portrait phone layout, locked
+//   - Tablet  -> tablet layout (fluid grid fits its width)
+//   - Computer-> desktop layout (orientation doesn't apply)
 // The lock takes effect in the installed app / Play Store build; browser
 // tabs don't allow orientation locking, but the layout stays correct there.
 function lockPhoneToPortrait() {
@@ -239,31 +239,31 @@ export function tapFeedback() {
 
 const WELCOME_HTML = [
   '<b><font size="5">Welcome to Kaban</font></b><br>',
-  'Kaban is your personal vault for AI prompts, links, and notes. Everything is stored on <b>your device only</b> â€” private, offline, yours.<br><br>',
-  '<b><font color="#7C3AED">â– </font> The four categories</b><br>',
-  '<b>Image Prompts</b> and <b>Video Prompts</b> hold your AI prompts. <b>Stored Links</b> saves videos and posts from TikTok, YouTube, Facebook, Instagram, and more â€” tap <b>Open</b> to jump straight to them. <b>Notes</b> is for anything else.<br><br>',
-  '<b><font color="#0F766E">â– </font> Creating cards</b><br>',
+  'Kaban is your personal vault for AI prompts, links, and notes. Everything is stored on <b>your device only</b> - private, offline, yours.<br><br>',
+  '<b><font color="#7C3AED">-</font> The four categories</b><br>',
+  '<b>Image Prompts</b> and <b>Video Prompts</b> hold your AI prompts. <b>Stored Links</b> saves videos and posts from TikTok, YouTube, Facebook, Instagram, and more - tap <b>Open</b> to jump straight to them. <b>Notes</b> is for anything else.<br><br>',
+  '<b><font color="#0F766E">-</font> Creating cards</b><br>',
   'Tap the <b>+</b> button, then choose <b>New Card</b> or <b>New Folder</b>. Give cards a title, an optional description (its purpose), and tags for easy searching.<br><br>',
-  '<b><font color="#0F766E">â– </font> Card actions</b><br>',
-  '<b>Copy</b> â€” one tap sends the content to your clipboard.<br>',
-  '<b>Pin</b> â€” keeps your go-to cards at the top.<br>',
-  '<b>Padlock</b> â€” locks a card against editing and deleting. Unlock it first to make changes.<br>',
-  '<b>Shield</b> â€” protects a card with your vault password. Its content is <b>encrypted</b> until you unlock the vault. <u>Warning:</u> there is <b>no password recovery</b>, so choose a password you will never forget.<br><br>',
-  '<b><font color="#D97706">â– </font> Notes</b><br>',
-  'Tap a note to read it full screen. Switch to <b>Edit Mode</b> to write, use the <b>formatting bar</b> (bold, colors, highlights, sizes), or tap <b>Focus</b> for distraction-free writing. Your edits <b>auto-save as drafts</b> â€” even if the app closes accidentally, your writing is safe.<br><br>',
-  '<b><font color="#2563EB">â– </font> Folders</b><br>',
-  'Create folders from the <b>+</b> button. Cards inside a folder live only in that folder. <u>Careful:</u> deleting a folder <b>permanently deletes every card inside it</b> â€” no restoration.<br><br>',
-  '<b><font color="#2563EB">â– </font> Share & Backup</b><br>',
-  '<b>Long-press</b> any card to select multiple cards, then <b>Share</b> them as one JSON file. The receiver imports it via <b>Backup &amp; Restore â†’ Restore from file</b>. Export a full backup regularly from the download icon â€” it is your insurance.<br><br>',
-  '<b><font color="#0F766E">â– </font> Dark mode</b><br>',
+  '<b><font color="#0F766E">-</font> Card actions</b><br>',
+  '<b>Copy</b> - one tap sends the content to your clipboard.<br>',
+  '<b>Pin</b> - keeps your go-to cards at the top.<br>',
+  '<b>Padlock</b> - locks a card against editing and deleting. Unlock it first to make changes.<br>',
+  '<b>Shield</b> - protects a card with your vault password. Its content is <b>encrypted</b> until you unlock the vault. <u>Warning:</u> there is <b>no password recovery</b>, so choose a password you will never forget.<br><br>',
+  '<b><font color="#D97706">-</font> Notes</b><br>',
+  'Tap a note to read it full screen. Switch to <b>Edit Mode</b> to write, use the <b>formatting bar</b> (bold, colors, highlights, sizes), or tap <b>Focus</b> for distraction-free writing. Your edits <b>auto-save as drafts</b> - even if the app closes accidentally, your writing is safe.<br><br>',
+  '<b><font color="#2563EB">-</font> Folders</b><br>',
+  'Create folders from the <b>+</b> button. Cards inside a folder live only in that folder. <u>Careful:</u> deleting a folder <b>permanently deletes every card inside it</b> - no restoration.<br><br>',
+  '<b><font color="#2563EB">-</font> Share & Backup</b><br>',
+  '<b>Long-press</b> any card to select multiple cards, then <b>Share</b> them as one JSON file. The receiver imports it via <b>Backup &amp; Restore -> Restore from file</b>. Export a full backup regularly from the download icon - it is your insurance.<br><br>',
+  '<b><font color="#0F766E">-</font> Dark mode</b><br>',
   'Tap the sun/moon icon in the header to switch themes anytime.<br><br>',
   '<i>You can safely delete this note once you know your way around. Enjoy your vault!</i><br>',
-  '<b>â€” Reymark Delagao</b>',
+  '<b>- Reymark Delagao</b>',
 ].join('');
 
 // ---- App Lock (4-digit PIN gate) ----
 // A separate, lightweight lock that guards the whole app on open. The PIN is
-// NEVER stored â€” only a salt and an encrypted verifier live in IndexedDB, the
+// NEVER stored - only a salt and an encrypted verifier live in IndexedDB, the
 // same zero-knowledge scheme the vault password uses. This is independent of
 // the vault password: a card's shield encryption is untouched by the app PIN.
 
@@ -347,7 +347,7 @@ export async function unlockVault(password) {
       try {
         vault.plain[i.id] = await decryptText(sessionKey, i.content);
       } catch {
-        /* corrupted or foreign cipher â€” leave inaccessible */
+        /* corrupted or foreign cipher - leave inaccessible */
       }
     }
   }
@@ -378,7 +378,7 @@ export async function changePassword(oldPw, newPw) {
     try {
       decrypted.push([i, await decryptText(oldKey, i.content)]);
     } catch {
-      /* foreign/corrupted cipher â€” leave it untouched */
+      /* foreign/corrupted cipher - leave it untouched */
     }
   }
 
@@ -440,7 +440,7 @@ export function newId() {
     : Date.now().toString(36) + Math.random().toString(36).slice(2, 10);
 }
 
-// IndexedDB cannot clone Svelte's reactive proxies â€” always write plain copies.
+// IndexedDB cannot clone Svelte's reactive proxies - always write plain copies.
 function plain(i) {
   return {
     id: i.id,
@@ -480,7 +480,7 @@ export async function saveItem(data) {
   const plainContent = contentProvided ? (data.content || '').trim() : '';
   const item = {
     id: data.id || newId(),
-    // Card type is permanent â€” existing cards keep their original type forever
+    // Card type is permanent - existing cards keep their original type forever
     type: existing ? existing.type : data.type,
     // When a caller omits title/description/tags (e.g. GoalView/TaskListView
     // saving only progress), keep the existing values instead of blanking them.
@@ -508,7 +508,7 @@ export async function saveItem(data) {
     protected: isProtected,
     order: existing && typeof existing.order === 'number' ? existing.order : null,
     linkedTo: existing ? existing.linkedTo || null : null,
-    // Diary fields â€” kept for all types but only meaningful for 'diary'.
+    // Diary fields - kept for all types but only meaningful for 'diary'.
     // entryDate = the day the entry is *about* (YYYY-MM-DD); mood = optional emoji.
     entryDate:
       data.entryDate !== undefined
@@ -522,7 +522,7 @@ export async function saveItem(data) {
         : existing
           ? existing.mood || null
           : null,
-    // Goal fields â€” kept for all types but only meaningful for 'goal'.
+    // Goal fields - kept for all types but only meaningful for 'goal'.
     // targetDate = deadline (YYYY-MM-DD, required for goals);
     // trackMode = 'slider' | 'milestones';
     // progress = 0..100 (used directly in slider mode, derived in milestone mode);
@@ -557,7 +557,7 @@ export async function saveItem(data) {
         : existing
           ? existing.status || 'active'
           : 'active',
-    // Task list field â€” array of { id, text, done, priority, due }.
+    // Task list field - array of { id, text, done, priority, due }.
     // priority: 1 (P1/urgent) | 2 (P2/soon) | 3 (P3/someday); due: YYYY-MM-DD|null
     tasks:
       data.tasks !== undefined
@@ -575,7 +575,7 @@ export async function saveItem(data) {
     createdAt: existing ? existing.createdAt : now,
     updatedAt: now,
   };
-  // Protected cards are stored encrypted â€” callers always pass plaintext
+  // Protected cards are stored encrypted - callers always pass plaintext
   if (isProtected && contentProvided) {
     if (!sessionKey) throw new Error('Vault is locked');
     item.content = await encryptText(sessionKey, plainContent);
@@ -677,7 +677,7 @@ export async function deleteFolder(id) {
   // Cascade delete: the folder AND every card inside are wiped permanently.
   const members = vault.items.filter((i) => i.folderId === id);
   if (members.some((m) => m.locked)) {
-    throw new Error('This folder has locked cards â€” unlock them first to delete');
+    throw new Error('This folder has locked cards - unlock them first to delete');
   }
   for (const m of members) {
     await db.remove(m.id);

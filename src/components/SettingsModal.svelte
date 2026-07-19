@@ -68,7 +68,7 @@
       class="min-h-0 flex-1 overflow-y-auto px-5 pb-5"
       style="padding-bottom: calc(1.5rem + env(safe-area-inset-bottom));"
     >
-      <!-- â”€â”€ PROTECTION â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ -->
+      <!-- -- PROTECTION ------------------------------- -->
       <p class="mb-2 mt-1 px-1 text-[11px] font-bold uppercase tracking-[0.12em] text-ink-soft">
         Protection
       </p>
@@ -76,7 +76,7 @@
         <ShieldDashboard {tapFeedback} />
       </div>
 
-      <!-- â”€â”€ APP LOCK (4-digit PIN on open) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ -->
+      <!-- -- APP LOCK (4-digit PIN on open) ----------- -->
       <p class="mb-2 px-1 text-[11px] font-bold uppercase tracking-[0.12em] text-ink-soft">
         App Lock
       </p>
@@ -175,7 +175,7 @@
         {/if}
       </div>
 
-      <!-- â”€â”€ FEEDBACK â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ -->
+      <!-- -- FEEDBACK --------------------------------- -->
       <p class="mb-2 px-1 text-[11px] font-bold uppercase tracking-[0.12em] text-ink-soft">
         Feedback
       </p>
@@ -272,7 +272,7 @@
         </div>
       </div>
 
-      <!-- â”€â”€ SECURITY (only if a vault password exists) â”€â”€ -->
+      <!-- -- SECURITY (only if a vault password exists) -- -->
       {#if vault.security.configured}
         <p class="mb-2 px-1 text-[11px] font-bold uppercase tracking-[0.12em] text-ink-soft">
           Security
@@ -302,7 +302,7 @@
         </div>
       {/if}
 
-      <!-- â”€â”€ ABOUT & MORE â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ -->
+      <!-- -- ABOUT & MORE ----------------------------- -->
       <p class="mb-2 px-1 text-[11px] font-bold uppercase tracking-[0.12em] text-ink-soft">
         About &amp; more
       </p>
