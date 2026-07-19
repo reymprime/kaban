@@ -365,7 +365,7 @@
         </svg>
         <div>
           <p class="text-[13px] font-semibold text-ink">Protected</p>
-          <p class="text-[11px] text-ink-soft">Content is encrypted â€” unlock the vault to view</p>
+          <p class="text-[11px] text-ink-soft">Content is encrypted &mdash; unlock the vault to view</p>
         </div>
       </div>
     {:else if item.type === 'link'}
