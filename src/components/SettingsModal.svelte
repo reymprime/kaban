@@ -68,7 +68,7 @@
       class="min-h-0 flex-1 overflow-y-auto px-5 pb-5"
       style="padding-bottom: calc(1.5rem + env(safe-area-inset-bottom));"
     >
-      <!-- ── PROTECTION ─────────────────────────────── -->
+      <!-- â”€â”€ PROTECTION â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ -->
       <p class="mb-2 mt-1 px-1 text-[11px] font-bold uppercase tracking-[0.12em] text-ink-soft">
         Protection
       </p>
@@ -76,7 +76,106 @@
         <ShieldDashboard {tapFeedback} />
       </div>
 
-      <!-- ── FEEDBACK ───────────────────────────────── -->
+      <!-- â”€â”€ APP LOCK (4-digit PIN on open) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ -->
+      <p class="mb-2 px-1 text-[11px] font-bold uppercase tracking-[0.12em] text-ink-soft">
+        App Lock
+      </p>
+      <div class="mb-6 overflow-hidden rounded-2xl border border-line bg-card">
+        {#if !vault.appLock.configured}
+          <button
+            class="flex w-full items-center gap-3 p-4 text-left active:bg-paper"
+            onclick={() => {
+              onclose();
+              vault.appLockPrompt = 'setup';
+            }}
+          >
+            <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-teal-soft">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--color-teal)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="4" y="10" width="16" height="11" rx="2.5" />
+                <path d="M8 10V7a4 4 0 0 1 8 0v3" />
+              </svg>
+            </span>
+            <div class="min-w-0 flex-1">
+              <p class="text-[14px] font-semibold leading-tight">Set up PIN lock</p>
+              <p class="text-[12px] text-ink-soft">Ask for a 4-digit PIN when opening Kaban</p>
+            </div>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--color-ink-soft)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="shrink-0">
+              <path d="m9 18 6-6-6-6" />
+            </svg>
+          </button>
+        {:else}
+          <div class="flex items-center gap-3 p-4">
+            <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-teal-soft">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--color-teal)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="4" y="10" width="16" height="11" rx="2.5" />
+                <path d="M8 10V7a4 4 0 0 1 8 0v3" />
+                <circle cx="12" cy="15.5" r="1.3" fill="var(--color-teal)" stroke="none" />
+              </svg>
+            </span>
+            <div class="min-w-0 flex-1">
+              <p class="text-[14px] font-semibold leading-tight">PIN lock is on</p>
+              <p class="text-[12px] text-ink-soft">Kaban asks for your PIN on open</p>
+            </div>
+            <span class="shrink-0 rounded-full bg-teal px-2.5 py-1 text-[11px] font-bold text-white">On</span>
+          </div>
+
+          <div class="mx-4 h-px bg-line"></div>
+
+          <button
+            class="flex w-full items-center gap-3 p-4 text-left active:bg-paper"
+            onclick={() => {
+              onclose();
+              vault.appLockPrompt = 'change';
+            }}
+          >
+            <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-teal-soft">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--color-teal)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M4 4v6h6" />
+                <path d="M20 20v-6h-6" />
+                <path d="M18.5 9A7 7 0 0 0 6 7.5L4 10m16 4-2 2.5A7 7 0 0 1 5.5 15" />
+              </svg>
+            </span>
+            <div class="min-w-0 flex-1">
+              <p class="text-[14px] font-semibold leading-tight">Change PIN</p>
+              <p class="text-[12px] text-ink-soft">Set a new 4-digit PIN</p>
+            </div>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--color-ink-soft)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="shrink-0">
+              <path d="m9 18 6-6-6-6" />
+            </svg>
+          </button>
+
+          <div class="mx-4 h-px bg-line"></div>
+
+          <button
+            class="flex w-full items-center gap-3 p-4 text-left active:bg-paper"
+            onclick={() => {
+              onclose();
+              vault.appLockPrompt = 'disable';
+            }}
+          >
+            <span
+              class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg"
+              style="background: var(--color-cat-video-soft);"
+            >
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--color-cat-video)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="4" y="10" width="16" height="11" rx="2.5" />
+                <path d="M8 10V7a4 4 0 0 1 7.5-2.3" />
+              </svg>
+            </span>
+            <div class="min-w-0 flex-1">
+              <p class="text-[14px] font-semibold leading-tight" style="color: var(--color-cat-video);">
+                Turn off PIN lock
+              </p>
+              <p class="text-[12px] text-ink-soft">Open Kaban without a PIN</p>
+            </div>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--color-ink-soft)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="shrink-0">
+              <path d="m9 18 6-6-6-6" />
+            </svg>
+          </button>
+        {/if}
+      </div>
+
+      <!-- â”€â”€ FEEDBACK â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ -->
       <p class="mb-2 px-1 text-[11px] font-bold uppercase tracking-[0.12em] text-ink-soft">
         Feedback
       </p>
@@ -173,7 +272,7 @@
         </div>
       </div>
 
-      <!-- ── SECURITY (only if a vault password exists) ── -->
+      <!-- â”€â”€ SECURITY (only if a vault password exists) â”€â”€ -->
       {#if vault.security.configured}
         <p class="mb-2 px-1 text-[11px] font-bold uppercase tracking-[0.12em] text-ink-soft">
           Security
@@ -203,7 +302,7 @@
         </div>
       {/if}
 
-      <!-- ── ABOUT & MORE ───────────────────────────── -->
+      <!-- â”€â”€ ABOUT & MORE â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ -->
       <p class="mb-2 px-1 text-[11px] font-bold uppercase tracking-[0.12em] text-ink-soft">
         About &amp; more
       </p>

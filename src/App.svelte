@@ -1,6 +1,6 @@
 <script>
   import { onMount } from 'svelte';
-  import { vault, loadVault, shareItems, moveToFolder, reorderItems, reorderFolders, tapFeedback, toast } from './lib/store.svelte.js';
+  import { vault, loadVault, shareItems, moveToFolder, reorderItems, reorderFolders, tapFeedback, toast, lockApp } from './lib/store.svelte.js';
   import { TABS_BY_WORLD, CATEGORIES } from './lib/categories.js';
   import { stripForSearch } from './lib/richtext.js';
   import Header from './components/Header.svelte';
@@ -15,6 +15,7 @@
   import FolderModal from './components/FolderModal.svelte';
   import SecurityModal from './components/SecurityModal.svelte';
   import SettingsModal from './components/SettingsModal.svelte';
+  import LockScreen from './components/LockScreen.svelte';
   import ReorderList from './components/ReorderList.svelte';
   import FolderReorderList from './components/FolderReorderList.svelte';
   import FolderPickerModal from './components/FolderPickerModal.svelte';
@@ -24,7 +25,7 @@
 
   let tab = $state('all');
 
-  // The Journey tab is an inline expander â€” tapping it slides Diary/Goals/Tasks
+  // The Journey tab is an inline expander Ã¢â‚¬â€ tapping it slides Diary/Goals/Tasks
   // into the same row (and back out) instead of opening a separate switcher.
   let journeyOpen = $state(false);
 
@@ -104,7 +105,7 @@
 
   async function handleMove(folder) {
     const n = await moveToFolder(selected, folder.id);
-    toast(`Moved ${n} card${n === 1 ? '' : 's'} to â€œ${folder.name}â€ âœ“`);
+    toast(`Moved ${n} card${n === 1 ? '' : 's'} to Ã¢â‚¬Å“${folder.name}Ã¢â‚¬Â Ã¢Å“â€œ`);
     showFolderPicker = false;
     cancelSelect();
   }
@@ -117,13 +118,13 @@
   async function saveReorder(orderedIds) {
     await reorderItems(orderedIds);
     reordering = false;
-    toast('New order saved âœ“');
+    toast('New order saved Ã¢Å“â€œ');
   }
 
   async function saveFolderReorder(orderedIds) {
     await reorderFolders(orderedIds);
     reorderingFolders = false;
-    toast('Folder order saved âœ“');
+    toast('Folder order saved Ã¢Å“â€œ');
   }
 
   function startSelect(id) {
@@ -154,12 +155,12 @@
     const res = await shareItems(selected);
     sharing = false;
     const skipNote = res.skipped
-      ? ` â€” ${res.skipped} protected card${res.skipped === 1 ? '' : 's'} skipped`
+      ? ` Ã¢â‚¬â€ ${res.skipped} protected card${res.skipped === 1 ? '' : 's'} skipped`
       : '';
-    if (res.status === 'shared') toast(`Shared âœ“${skipNote}`);
-    else if (res.status === 'downloaded') toast(`JSON file downloaded âœ“${skipNote}`);
+    if (res.status === 'shared') toast(`Shared Ã¢Å“â€œ${skipNote}`);
+    else if (res.status === 'downloaded') toast(`JSON file downloaded Ã¢Å“â€œ${skipNote}`);
     else if (res.status === 'empty')
-      toast('Only protected cards selected â€” unlock the vault first');
+      toast('Only protected cards selected Ã¢â‚¬â€ unlock the vault first');
     if (res.status !== 'cancelled') cancelSelect();
   }
 
@@ -173,6 +174,24 @@
       { passive: true }
     );
     await loadVault();
+
+    // Re-arm the app PIN when returning from the background after a short
+    // absence, so the lock actually protects a warm app â€” not just cold
+    // starts. The grace period avoids re-locking during quick round-trips
+    // like the system share sheet or file picker.
+    let hiddenAt = 0;
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'hidden') {
+        hiddenAt = Date.now();
+      } else if (
+        vault.appLock.configured &&
+        hiddenAt &&
+        Date.now() - hiddenAt > 20000
+      ) {
+        lockApp();
+      }
+    });
+
     // Handle app shortcut launches (long-press app icon -> quick actions)
     const params = new URLSearchParams(location.search);
     const t = params.get('new');
@@ -202,7 +221,7 @@
     if (openFolder) {
       list = list.filter((i) => i.folderId === openFolder.id);
     } else if (tab === 'folder') {
-      // The Folders tab shows folders only â€” no loose cards
+      // The Folders tab shows folders only Ã¢â‚¬â€ no loose cards
       return [];
     } else {
       // Cards inside folders live ONLY inside their folder while browsing.
@@ -231,7 +250,7 @@
   });
 
   const visibleFolders = $derived.by(() => {
-    // Folders live in their own tab â€” a dedicated home for all of them
+    // Folders live in their own tab Ã¢â‚¬â€ a dedicated home for all of them
     if (openFolder || tab !== 'folder') return [];
     let fs = vault.folders;
     const q = query.trim().toLowerCase();
@@ -258,7 +277,7 @@
   const counts = $derived.by(() => {
     const journeyTypes = TABS_BY_WORLD.journey.map((t) => t.id);
     const c = {
-      // 'All' lives in Vault, so it counts Vault items only â€” Journey entries
+      // 'All' lives in Vault, so it counts Vault items only Ã¢â‚¬â€ Journey entries
       // (diary/goal/task) have their own tabs and stay out of this total.
       all: vault.items.filter((i) => !journeyTypes.includes(i.type)).length,
       image: 0,
@@ -440,7 +459,7 @@
     {/if}
 
     {#if !vault.loaded}
-      <p class="py-16 text-center text-sm text-ink-soft">Opening your kabanâ€¦</p>
+      <p class="py-16 text-center text-sm text-ink-soft">Opening your kabanÃ¢â‚¬Â¦</p>
     {:else if filtered.length === 0 && !visibleFolders.length}
       <div class="flex flex-col items-center gap-3 py-20 text-center">
         <div
@@ -454,7 +473,7 @@
         </div>
         {#if query}
           <p class="text-sm text-ink-soft">
-            No results for â€œ{query}â€. Try another keyword.
+            No results for Ã¢â‚¬Å“{query}Ã¢â‚¬Â. Try another keyword.
           </p>
         {:else if tab === 'folder'}
           <p class="font-display text-lg font-semibold">No folders yet</p>
@@ -466,11 +485,11 @@
           <p class="font-display text-lg font-semibold">Empty folder</p>
           <p class="max-w-[260px] text-sm text-ink-soft">
             Tap <span class="font-semibold text-teal">+</span> to add a card here,
-            or edit an existing card and set its Folder to â€œ{openFolder.name}â€.
+            or edit an existing card and set its Folder to Ã¢â‚¬Å“{openFolder.name}Ã¢â‚¬Â.
           </p>
         {:else if visibleFolders.length}
           <p class="max-w-[240px] text-sm text-ink-soft">
-            No cards here yet â€” tap <span class="font-semibold text-teal">+</span> to add one.
+            No cards here yet Ã¢â‚¬â€ tap <span class="font-semibold text-teal">+</span> to add one.
           </p>
         {:else if world === 'journey'}
           {#if tab === 'diary'}
@@ -697,7 +716,7 @@
           <circle cx="18" cy="5" r="3" /><circle cx="6" cy="12" r="3" /><circle cx="18" cy="19" r="3" />
           <path d="m8.6 13.5 6.8 4M15.4 6.5l-6.8 4" />
         </svg>
-        {sharing ? 'â€¦' : 'Share'}
+        {sharing ? 'Ã¢â‚¬Â¦' : 'Share'}
       </button>
     </div>
   {/if}
@@ -717,6 +736,12 @@
   {/if}
   {#if showSettings}
     <SettingsModal onclose={() => (showSettings = false)} />
+  {/if}
+  {#if vault.appLockPrompt}
+    <LockScreen
+      mode={vault.appLockPrompt}
+      onclose={() => (vault.appLockPrompt = null)}
+    />
   {/if}
   {#if vault.securityPrompt}
     <SecurityModal
@@ -782,4 +807,10 @@
   {/if}
 
   <Toast />
+
+  <!-- App Lock gate â€” sits above everything until the PIN is entered. Only
+       appears once the vault has loaded so nothing sensitive flashes first. -->
+  {#if vault.loaded && vault.appLock.locked}
+    <LockScreen mode="unlock" />
+  {/if}
 </div>
