@@ -1,6 +1,6 @@
 <script>
   import { lockScroll } from '../lib/scrollLock.js';
-  import { vault, saveSettings, setTheme, setPalette, tapFeedback } from '../lib/store.svelte.js';
+  import { vault, saveSettings, setTheme, setPalette, setRotationLock, tapFeedback } from '../lib/store.svelte.js';
   import ShieldDashboard from './ShieldDashboard.svelte';
 
   let { onclose } = $props();
@@ -27,6 +27,12 @@
 
   function pickPalette(id) {
     setPalette(id);
+    tapFeedback();
+  }
+
+  // Screen rotation: true = pin phones to portrait, false = allow landscape.
+  function pickRotation(lock) {
+    setRotationLock(lock);
     tapFeedback();
   }
 
@@ -168,6 +174,46 @@
               </button>
             {/each}
           </div>
+        </div>
+      </div>
+
+      <!-- -- DISPLAY ---------------------------------- -->
+      <p class="mb-2 mt-1 px-1 text-[11px] font-bold uppercase tracking-[0.12em] text-ink-soft">
+        Display
+      </p>
+      <div class="mb-6 overflow-hidden rounded-2xl border border-line bg-card">
+        <div class="p-4">
+          <div class="mb-3 flex items-center gap-2.5">
+            <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-teal-soft">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--color-teal)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="6" y="2" width="12" height="20" rx="2.5" />
+                <path d="M11 18.5h2" />
+              </svg>
+            </span>
+            <div class="min-w-0">
+              <p class="text-[14px] font-semibold leading-tight">Screen rotation</p>
+              <p class="text-[12px] text-ink-soft">Keep phones upright, or allow landscape</p>
+            </div>
+          </div>
+          <div class="grid grid-cols-2 gap-1.5">
+            <button
+              class="rounded-xl py-2.5 text-[13px] font-semibold transition-all active:scale-95
+                {vault.settings.rotationLock ? 'bg-teal text-white shadow-sm' : 'bg-paper text-ink-soft'}"
+              onclick={() => pickRotation(true)}
+            >
+              Portrait lock
+            </button>
+            <button
+              class="rounded-xl py-2.5 text-[13px] font-semibold transition-all active:scale-95
+                {!vault.settings.rotationLock ? 'bg-teal text-white shadow-sm' : 'bg-paper text-ink-soft'}"
+              onclick={() => pickRotation(false)}
+            >
+              Free
+            </button>
+          </div>
+          <p class="mt-3 text-[11px] leading-relaxed text-ink-soft">
+            Portrait lock pins phones so the layout never breaks. Tablets and desktops always rotate freely.
+          </p>
         </div>
       </div>
 

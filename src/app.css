@@ -424,3 +424,199 @@ button:active {
     outline-offset: 6px;
   }
 }
+/* ============================================================
+   MOTION SYSTEM  (super-smooth, cohesive, reduced-motion safe)
+   One spring language across the whole app:
+   - entrances decelerate with a silky easeOut
+   - presses use a gentle overshoot spring
+   - a single global tap ripple is the unified "click" animation
+   Every new animation is disabled under prefers-reduced-motion
+   in the block at the bottom of this section.
+   ============================================================ */
+
+/* ---- Keyframes ---- */
+@keyframes card-enter {
+  from {
+    opacity: 0;
+    transform: translateY(16px) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+@keyframes fade-rise {
+  from {
+    opacity: 0;
+    transform: translateY(11px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes scale-in {
+  from {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+/* Icon press: the glyph itself springs (used on header action icons) */
+@keyframes icon-pop {
+  0% { transform: scale(1); }
+  35% { transform: scale(0.8); }
+  70% { transform: scale(1.14); }
+  100% { transform: scale(1); }
+}
+/* Global tap ripple, spawned at the pointer on any button/link */
+@keyframes tap-ripple {
+  from {
+    transform: translate(-50%, -50%) scale(0);
+    opacity: 0.42;
+  }
+  to {
+    transform: translate(-50%, -50%) scale(4);
+    opacity: 0;
+  }
+}
+/* Rotate-to-portrait hint: a phone rocking upright, on loop */
+@keyframes rotate-hint {
+  0%, 18% { transform: rotate(-90deg); }
+  50%, 68% { transform: rotate(0deg); }
+  100% { transform: rotate(-90deg); }
+}
+@keyframes soft-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-6px); }
+}
+
+/* ---- Reusable entrance utilities ----
+   Drive a cascade with an inline `--i` (0,1,2...) on siblings.
+   `both` fill-mode holds the hidden start state through the delay,
+   so nothing flashes in before its turn. */
+.anim-rise {
+  animation: fade-rise 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation-delay: calc(var(--i, 0) * 55ms);
+}
+.anim-fade {
+  animation: fade-in 0.45s ease both;
+  animation-delay: calc(var(--i, 0) * 55ms);
+}
+.anim-scale {
+  animation: scale-in 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+  animation-delay: calc(var(--i, 0) * 55ms);
+}
+
+/* ---- Orchestrated grid entrance ----
+   Cards and folders rise + fade in a gentle stagger the moment they
+   mount. Because the lists are keyed by id, switching tabs or typing
+   a search remounts the rows, so the reveal replays naturally. */
+.card-grid > li,
+.folder-grid > li {
+  animation: card-enter 0.44s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.card-grid > li:nth-child(1),
+.folder-grid > li:nth-child(1) { animation-delay: 0ms; }
+.card-grid > li:nth-child(2),
+.folder-grid > li:nth-child(2) { animation-delay: 40ms; }
+.card-grid > li:nth-child(3),
+.folder-grid > li:nth-child(3) { animation-delay: 80ms; }
+.card-grid > li:nth-child(4),
+.folder-grid > li:nth-child(4) { animation-delay: 120ms; }
+.card-grid > li:nth-child(5),
+.folder-grid > li:nth-child(5) { animation-delay: 160ms; }
+.card-grid > li:nth-child(6),
+.folder-grid > li:nth-child(6) { animation-delay: 200ms; }
+.card-grid > li:nth-child(7),
+.folder-grid > li:nth-child(7) { animation-delay: 235ms; }
+.card-grid > li:nth-child(8),
+.folder-grid > li:nth-child(8) { animation-delay: 265ms; }
+.card-grid > li:nth-child(9),
+.folder-grid > li:nth-child(9) { animation-delay: 290ms; }
+.card-grid > li:nth-child(n + 10),
+.folder-grid > li:nth-child(n + 10) { animation-delay: 310ms; }
+
+/* ---- Premium press physics (global) ----
+   Overrides the earlier plain button:active scale with a springy curve
+   plus a hair of brightness, so every tap feels tactile and alive. */
+button {
+  transition:
+    scale 0.14s cubic-bezier(0.34, 1.56, 0.64, 1),
+    filter 0.14s ease;
+}
+button:active {
+  scale: 0.93;
+  filter: brightness(0.97);
+}
+
+/* ---- Icon-button springs ----
+   Marked icon buttons trade the parent scale for a lively glyph pop,
+   so the icon itself reacts. No parent scale = no double-transform. */
+button.icon-btn:active {
+  scale: 1;
+  filter: none;
+}
+button.icon-btn:active svg {
+  animation: icon-pop 0.42s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* ---- The one unified click animation ----
+   A body-level ripple placed at the exact tap point. Fixed position
+   means it never clips against a button's overflow, and it inherits
+   the active palette accent via the teal token. */
+.tap-ripple {
+  position: fixed;
+  z-index: 9999;
+  width: 26px;
+  height: 26px;
+  border-radius: 9999px;
+  pointer-events: none;
+  background: radial-gradient(
+    circle,
+    color-mix(in srgb, var(--color-teal) 60%, transparent) 0%,
+    color-mix(in srgb, var(--color-teal) 24%, transparent) 55%,
+    transparent 72%
+  );
+  transform: translate(-50%, -50%) scale(0);
+  animation: tap-ripple 0.5s ease-out forwards;
+}
+
+/* ---- Rotate-gate motion (used by the portrait overlay) ---- */
+.rotate-hint-icon {
+  animation: rotate-hint 2.8s ease-in-out infinite;
+}
+.soft-float {
+  animation: soft-float 3.4s ease-in-out infinite;
+}
+
+/* Everything above bows out gracefully when motion is reduced. */
+@media (prefers-reduced-motion: reduce) {
+  .card-grid > li,
+  .folder-grid > li,
+  .anim-rise,
+  .anim-fade,
+  .anim-scale {
+    animation: none;
+  }
+  button.icon-btn:active svg {
+    animation: none;
+  }
+  .tap-ripple {
+    display: none;
+  }
+  .rotate-hint-icon {
+    animation: none !important;
+    transform: none !important;
+  }
+  .soft-float {
+    animation: none !important;
+  }
+}

@@ -49,7 +49,7 @@
     </button>
     <div class="flex items-center gap-1.5">
       <button
-        class="flex h-9 w-9 items-center justify-center rounded-xl border border-line bg-card text-ink-soft transition-colors active:bg-line"
+        class="icon-btn flex h-9 w-9 items-center justify-center rounded-xl border border-line bg-card text-ink-soft transition-colors active:bg-line"
         id="tour-settings"
         aria-label="Settings"
         onclick={onsettings}
@@ -60,7 +60,7 @@
         </svg>
       </button>
       <button
-        class="flex h-9 w-9 items-center justify-center rounded-xl border border-line bg-card text-ink-soft transition-colors active:bg-line"
+        class="icon-btn flex h-9 w-9 items-center justify-center rounded-xl border border-line bg-card text-ink-soft transition-colors active:bg-line"
         id="tour-theme"
         aria-label={vault.isDark ? 'Switch to light mode' : 'Switch to dark mode'}
         onclick={themeTap}
@@ -79,7 +79,7 @@
         {/if}
       </button>
       <button
-        class="flex h-9 w-9 items-center justify-center rounded-xl border transition-colors active:bg-line
+        class="icon-btn flex h-9 w-9 items-center justify-center rounded-xl border transition-colors active:bg-line
           {vault.security.unlocked ? 'border-teal bg-teal-soft text-teal' : 'border-line bg-card text-ink-soft'}"
         id="tour-shield"
         aria-label={!vault.security.configured
@@ -100,7 +100,7 @@
         {/if}
       </button>
       <button
-        class="flex h-9 w-9 items-center justify-center rounded-xl border border-line bg-card text-ink-soft transition-colors active:bg-line"
+        class="icon-btn flex h-9 w-9 items-center justify-center rounded-xl border border-line bg-card text-ink-soft transition-colors active:bg-line"
         id="tour-backup"
         aria-label="Backup and restore"
         onclick={onbackup}

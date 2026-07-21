@@ -17,10 +17,13 @@ export const vault = $state({
   theme: 'auto', // 'auto' | 'light' | 'dark'
   palette: 'default', // 'default' | 'pumpkin' - full color skin
   isDark: false,
-  settings: { haptic: 'medium', sound: false, volume: 0.5 },
+  settings: { haptic: 'medium', sound: false, volume: 0.5, rotationLock: true },
   stats: { days: {}, lastRecapAt: 0 },
   recapOpen: false,
   tutorialOpen: false,
+  // Live device/orientation flags, used by the portrait rotation lock.
+  isPhone: false,
+  isLandscape: false,
 });
 
 // Session-only. Never persisted. Cleared on lock or app close.
@@ -63,8 +66,8 @@ export async function loadVault() {
     if (statsMeta?.value) Object.assign(vault.stats, statsMeta.value);
     applyTheme();
     applyPalette();
-    // Each device keeps its own UI - phones stay portrait (installed app)
-    lockPhoneToPortrait();
+    // Apply the saved rotation preference (portrait lock, or free).
+    applyRotationLock();
 
     // ---- Weekly recap bookkeeping ----
     const WEEK = 7 * 24 * 60 * 60 * 1000;
@@ -238,20 +241,53 @@ export async function saveSettings(patch) {
   } catch {}
 }
 
-// ---- Device-fit UI ----
-// Each device gets its own UI, permanently - no rotation adjustment:
-//   - Phone   -> portrait phone layout, locked
-//   - Tablet  -> tablet layout (fluid grid fits its width)
-//   - Computer-> desktop layout (orientation doesn't apply)
-// The lock takes effect in the installed app / Play Store build; browser
-// tabs don't allow orientation locking, but the layout stays correct there.
-function lockPhoneToPortrait() {
+// ---- Screen rotation lock ----
+// Kaban can pin phones to portrait so the single-column layout never
+// breaks under rotation. It is a user setting (Settings -> Display) that
+// defaults ON.
+//   - Phone  -> portrait, enforced (native lock + landscape gate)
+//   - Tablet / Computer -> always free; the fluid grid fits any width
+// The native screen.orientation.lock only sticks in the installed app /
+// Play Store build; in a plain browser tab it is quietly ignored, so the
+// RotateOverlay is the fallback that gates landscape until the phone is
+// turned upright (or the user switches the lock off).
+
+// Phone = smallest physical side under 600px. Fixed per device. We also
+// track live orientation so the UI can react the instant it changes.
+if (typeof window !== 'undefined') {
   try {
-    // Smallest screen side < 600px = phone. Tablets/desktops stay free.
-    const isPhone = Math.min(screen.width, screen.height) < 600;
-    if (isPhone && screen.orientation?.lock) {
-      screen.orientation.lock('portrait').catch(() => {});
+    vault.isPhone = Math.min(screen.width, screen.height) < 600;
+  } catch {}
+  const landscapeMq = window.matchMedia('(orientation: landscape)');
+  vault.isLandscape = landscapeMq.matches;
+  landscapeMq.addEventListener('change', (e) => {
+    vault.isLandscape = e.matches;
+    // Re-assert the native lock each time the device flips into landscape.
+    if (vault.settings.rotationLock) applyRotationLock();
+  });
+}
+
+function applyRotationLock() {
+  try {
+    const o = screen.orientation;
+    if (!o) return;
+    if (vault.settings.rotationLock) {
+      // Only phones get pinned; tablets and desktops stay free.
+      if (vault.isPhone && typeof o.lock === 'function') {
+        o.lock('portrait').catch(() => {});
+      }
+    } else if (typeof o.unlock === 'function') {
+      o.unlock();
     }
+  } catch {}
+}
+
+// Flip the portrait lock on or off, persist it, and apply instantly.
+export async function setRotationLock(on) {
+  vault.settings.rotationLock = on;
+  applyRotationLock();
+  try {
+    await db.putMeta({ key: 'settings', value: { ...vault.settings } });
   } catch {}
 }
 

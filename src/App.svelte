@@ -22,6 +22,7 @@
   import RecapModal from './components/RecapModal.svelte';
   import Tutorial from './components/Tutorial.svelte';
   import Toast from './components/Toast.svelte';
+  import RotateOverlay from './components/RotateOverlay.svelte';
 
   let tab = $state('all');
 
@@ -164,12 +165,32 @@
     if (res.status !== 'cancelled') cancelSelect();
   }
 
+  // A single, palette-aware ripple placed right at the tap point. It lives on
+  // <body> and is position:fixed, so it never clips against a button's own
+  // overflow and reads the active accent from the teal token in CSS.
+  function spawnRipple(x, y) {
+    const r = document.createElement('span');
+    r.className = 'tap-ripple';
+    r.style.left = x + 'px';
+    r.style.top = y + 'px';
+    document.body.appendChild(r);
+    const cleanup = () => r.remove();
+    r.addEventListener('animationend', cleanup);
+    setTimeout(cleanup, 700); // safety net if animationend is ever missed
+  }
+
   onMount(async () => {
-    // Tap feedback (haptics + click sound) for every button and link app-wide
+    // For every button and link app-wide: tap feedback (haptics + click sound)
+    // plus the unified click ripple.
+    const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
     document.addEventListener(
       'pointerdown',
       (e) => {
-        if (e.target.closest('button, a, [role="button"]')) tapFeedback();
+        if (!e.target.closest('button, a, [role="button"]')) return;
+        tapFeedback();
+        // No ripple over typing controls, or when motion is reduced.
+        if (reduceMotion.matches || e.target.closest('input, textarea')) return;
+        spawnRipple(e.clientX, e.clientY);
       },
       { passive: true }
     );
@@ -461,7 +482,7 @@
     {#if !vault.loaded}
       <p class="py-16 text-center text-sm text-ink-soft">Opening your kaban...</p>
     {:else if filtered.length === 0 && !visibleFolders.length}
-      <div class="flex flex-col items-center gap-3 py-20 text-center">
+      <div class="anim-rise flex flex-col items-center gap-3 py-20 text-center">
         <div
           class="flex h-14 w-14 items-center justify-center rounded-2xl bg-teal-soft"
         >
@@ -812,5 +833,11 @@
        appears once the vault has loaded so nothing sensitive flashes first. -->
   {#if vault.loaded && vault.appLock.locked}
     <LockScreen mode="unlock" />
+  {/if}
+
+  <!-- Portrait gate - only a phone, only in landscape, only while the rotation
+       lock is on. Keeps the whole app upright even over the PIN screen. -->
+  {#if vault.loaded && vault.isPhone && vault.settings.rotationLock && vault.isLandscape}
+    <RotateOverlay />
   {/if}
 </div>
